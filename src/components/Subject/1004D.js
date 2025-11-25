@@ -55,23 +55,23 @@ const Form1004D = () => {
     const timerRef = useRef(null);
 
     const PDF_VS_PDF_PROMPT = `1. Please confirm if all sections/fields in the subject section of the 1004D are filled.
-2. Please Compare 'Contract Price' and 'Date of Contract'of 1004D to contract section of OA report.
-3. Please Compare 'Effective Date' and 'Final Value' (as Original Appraised Value)from 1004d to effective date and final value in OA.
-4. Please Compare 'Original Appraiser', 'Lender/Client', and 'Address' from 1004d to the subject section's lender/ client name and address of OA.
-5. Strict and only check in 1004D, if "SUMMARY APPRAISAL UPDATE REPORT" section is checked, then question "HAS THE MARKET VALUE OF THE SUBJECT PROPERTY DECLINED SINCE THE EFFECTIVE DATE OF THE PRIOR APPRAISAL? " should be marked yes or no. If marked yes then value should be shown with difference. If marked NO then no difference value should be shown.
+2. Compare 'Contract Price' and 'Date of Contract' from the 1004D (new PDF) to the contract section of the Original Appraisal (old PDF).
+3. Compare 'Effective Date' and 'Final Value' (as Original Appraised Value) from the 1004D (new PDF) to the 'Effective Date' and 'Final Value' in the Original Appraisal (old PDF).
+4. Compare 'Original Appraiser', 'Lender/Client', and 'Address' from the 1004D (new PDF) to the subject section's 'Appraiser', 'Lender/Client Name', and 'Address' of the Original Appraisal (old PDF).
+5. In the 1004D PDF, check the "SUMMARY APPRAISAL UPDATE REPORT" section. If it is checked, verify that the question "HAS THE MARKET VALUE OF THE SUBJECT PROPERTY DECLINED SINCE THE EFFECTIVE DATE OF THE PRIOR APPRAISAL?" is answered 'Yes' or 'No'. If 'Yes', a difference value must be present. If 'No', no difference value should be present.
  
-In signature section in if this section is checked then effective date should be 100% present, if not present then show error. Inspection date is optioanl, but if given it should be less than/ or equal to the effective date.
+Also, if this section is checked, the 'Effective Date' in the signature area must be present. The 'Inspection Date' is optional, but if present, it must be less than or equal to the 'Effective Date'.
  
-6. Strict and only check in 1004D, if " CERTIFICATION OF COMPLETION" section is checked, then question "HAVE THE IMPROVEMENTS BEEN COMPLETED IN ACCORDANCE WITH THE REQUIREMENTS AND CONDITIONS STATED IN THE ORIGINAL APPRAISAL REPORT? " should be marked yes or no. If marked yes then repairs, changes, revisions should be matched with reconcilation section of OA. In OA the checkmark should be on "subject to" .If marked NO then ok.
+6. In the 1004D PDF, check the "CERTIFICATION OF COMPLETION" section. If it is checked, verify that the question "HAVE THE IMPROVEMENTS BEEN COMPLETED IN ACCORDANCE WITH THE REQUIREMENTS AND CONDITIONS STATED IN THE ORIGINAL APPRAISAL REPORT?" is answered 'Yes' or 'No'. If 'Yes', the repairs/changes mentioned should match the reconciliation section of the Original Appraisal (old PDF), where the appraisal should be marked "subject to".
  
-In signature section in if this section is checked then inspection date should be 100% present, if not present then show error. Effective date is optioanl, but if given it should be more than/ equal to the inspection date.
+Also, if this section is checked, the 'Inspection Date' in the signature area must be present. The 'Effective Date' is optional, but if present, it must be greater than or equal to the 'Inspection Date'.
  
  
-7. Confirm presence of 'Subject street, front in the 1004D.
-8. Confirm presence of 'E&O and license' in the 1004D..
-9. Confirm presence of 'Subject photo addendum' in the 1004D. Required mandatory when " CERTIFICATION OF COMPLETION" is checked.
+7. Confirm the presence of a 'Subject street, front view' photo in the 1004D PDF.
+8. Confirm the presence of 'E&O and license' details in the 1004D PDF.
+9. Confirm the presence of a 'Subject photo addendum' in the 1004D PDF. This is mandatory if the "CERTIFICATION OF COMPLETION" section is checked.
 
-For each item, provide a JSON object in a 'details' array. Each object must have 'sr_no', 'description' (the checklist item), 'old_pdf' (value from old PDF), 'new_pdf' (value from new PDF), 'comment' (details of the finding), and 'final_output' ('Match', 'Mismatch', 'Not Found', or 'Present').`;
+For each item, provide a JSON object in a 'details' array. Each object must have 'sr_no', 'description' (the checklist item), 'original_appraisal_value' (value from old PDF), 'form_1004D_value' (value from new PDF), 'comment' (details of the finding), and 'status' ('Match', 'Mismatch', 'Not Found', or 'Present').`;
 
     const HTML_VS_PDF_PROMPT = `1. The lender/client's name and lender/client address from the signature section of the 1004d PDF should match the lender/client's name and address in HTML.
 2. The inspection date of 1004D should match the inspection date of HTML.
@@ -238,14 +238,10 @@ For each item, provide a JSON object in a 'details' array. Each object must have
     };
 
     const renderPdfVsPdfResponse = (data) => {
-        // The response might be inside a 'fields' property.
-        const responseData = data.fields || data;
-
-        if (!responseData || !responseData.details || !Array.isArray(responseData.details) || responseData.details.length === 0) {
+        const details = data?.fields?.details || data?.details;
+        if (!details || !Array.isArray(details) || details.length === 0 || !details[0].original_appraisal_value) {
             return renderGenericObject(data); // Fallback for unexpected structure
         }
-
-        const details = responseData.details;
 
         return (
             <Paper elevation={1} sx={{ p: 2, mt: 3 }}>
@@ -255,22 +251,22 @@ For each item, provide a JSON object in a 'details' array. Each object must have
                         <TableHead>
                             <TableRow>
                                 <TableCell sx={{ fontWeight: 'bold' }}>Sr. No</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold' }}>Checklist</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold' }}>Old File Values</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold' }}>New File Values</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold' }}>Original Appraisal Value</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold' }}>1004D Form Value</TableCell>
                                 <TableCell sx={{ fontWeight: 'bold' }}>Details</TableCell>
                                 <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {details.map((item, index) => (
-                                <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                <TableRow key={item.sr_no || index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                                     <TableCell>{item.sr_no || 'N/A'}</TableCell>
                                     <TableCell>{item.description || 'N/A'}</TableCell>
-                                    <TableCell>{item.old_pdf || 'N/A'}</TableCell>
-                                    <TableCell>{item.new_pdf || 'N/A'}</TableCell>
+                                    <TableCell>{item.original_appraisal_value || 'N/A'}</TableCell>
+                                    <TableCell>{item.form_1004D_value || 'N/A'}</TableCell>
                                     <TableCell>{item.comment || 'N/A'}</TableCell>
-                                    <TableCell>{item.final_output || 'N/A'}</TableCell>
+                                    <TableCell>{item.status || 'N/A'}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
