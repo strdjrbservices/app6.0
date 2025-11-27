@@ -1,8 +1,30 @@
 html {
   scroll-behavior: smooth;
 }
-.css-1t3pplt,.css-tt3eps,.css-2vdc11,.css-15xvylo,.css-1qlcbbw,.CAR1.bg-primary, .CAR1.bg-secondary, .CAR1.bg-info, .CAR1.bg-warning, .CAR1.bg-success, .CAR1.bg-danger, .CAR1.bg-dark, .CAR1.bg-light{
+
+.css-1t3pplt,
+.css-tt3eps,
+.css-2vdc11,
+.css-15xvylo,
+.css-1qlcbbw,
+.CAR1.bg-primary,
+.CAR1.bg-secondary,
+.CAR1.bg-info,
+.CAR1.bg-warning,
+.CAR1.bg-success,
+.CAR1.bg-danger,
+.CAR1.bg-dark,
+.CAR1.bg-light {
   background-color: #0288d1 !important;
+}
+
+.css-mr3dsx-MuiTableCell-root {
+  line-height: 4 !important;
+  padding: 5px !important;
+}
+.css-vc0bxw-MuiTableCell-root {
+  line-height: 2 !important;
+  padding: 5px !important;
 }
 
 :root {
@@ -47,10 +69,12 @@ html {
   --table-border: var(--color-border);
   --highlight-bg: var(--color-highlight);
 }
-.table-hover{
+
+.table-hover {
   cursor: default;
   margin-top: 20px !important;
 }
+
 [data-theme="dark"] {
   --bg-color: #121212;
   --sidebar-bg: #1e1e1e;
@@ -65,7 +89,7 @@ html {
   --text-primary: #e0e0e0;
   --text-secondary: #b0bec5;
   --table-border: #424242;
- 
+
   /* --- Base Palette (Dark Theme) --- */
   --color-primary: #1e88e5;
   --color-background: #121212;
@@ -79,7 +103,7 @@ html {
   --color-hover-bg: #333;
 }
 
-#select{
+#select {
   max-width: 250px !important;
   width: 200vw !important;
 }
@@ -89,7 +113,8 @@ html {
   flex-direction: row;
   background-color: var(--bg-color);
 }
-.refresh{
+
+.refresh {
   width: 45px !important;
   height: 45px !important;
 }
@@ -108,7 +133,7 @@ html {
   z-index: 1000;
   transition: width 0.3s ease, transform 0.3s ease;
   border-right: 1px solid var(--sidebar-border);
-  box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
 }
 
 .sidebar.open {
@@ -117,7 +142,7 @@ html {
 }
 
 .sidebar.closed {
-  width: 40px; 
+  width: 40px;
   overflow-x: hidden;
 }
 
@@ -128,25 +153,29 @@ html {
   border-bottom: 1px solid var(--sidebar-border);
   position: relative;
 }
+
 .sidebar.closed .sidebar-title,
 .sidebar.closed .sidebar-footer,
 .sidebar.closed .MuiListItemText-primary {
   display: none;
 }
 
-.highlighted-field{
-  
+.highlighted-field {
+
   padding: 5px;
   border-radius: 4px;
 }
+
 .highlighted-field .field-label {
   font-weight: 700;
   font-size: 16px;
   color: var(--color-on-background);
 }
+
 .highlighted-field .field-value {
   color: var(--color-on-background);
 }
+
 .highlighted-field .field-value-pre {
   color: var(--color-on-background);
 }
@@ -155,22 +184,28 @@ html {
 [data-theme="light"] .highlighted-field .field-label,
 [data-theme="light"] .highlighted-field .field-value,
 [data-theme="light"] .highlighted-field .field-value-pre {
-    color: #000000 !important;
+  color: #000000 !important;
 }
+
 .keyword-highlight {
   /* A distinct yellow for keywords */
-  color: #000 !important; /* Keyword text should be dark for contrast on yellow */
+  color: #000 !important;
+  /* Keyword text should be dark for contrast on yellow */
   padding: 1px 3px;
 }
-.css-uzrpt7-MuiButtonBase-root-MuiButton-root{
+
+.css-uzrpt7-MuiButtonBase-root-MuiButton-root {
   min-width: 350px !important;
 }
-.css-nvfvvk-MuiNativeSelect-root-MuiSelect-select-MuiInputBase-input-MuiOutlinedInput-input{
+
+.css-nvfvvk-MuiNativeSelect-root-MuiSelect-select-MuiInputBase-input-MuiOutlinedInput-input {
   min-width: 320px !important;
 }
-.css-17fpwt7-MuiGrid-root{
+
+.css-17fpwt7-MuiGrid-root {
   min-width: 320px !important;
 }
+
 .sidebar-logo {
   width: 32px;
   height: 32px;
@@ -211,7 +246,7 @@ html {
 .sidebar .sidebar-link.MuiListItemButton-root {
   margin: 4px 0;
   border-radius: 6px;
-  color: var(--sidebar-text); 
+  color: var(--sidebar-text);
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -233,7 +268,7 @@ html {
 
 /* --- Main Content Styles --- */
 .main-content {
-  margin-left: 40px; 
+  margin-left: 40px;
   width: calc(100% - 40px);
   padding: 20px 30px;
   transition: margin-left 0.3s ease, width 0.3s ease;
@@ -255,32 +290,33 @@ html {
   color: white;
   padding: 0.75rem 1.25rem;
   border-bottom: 0;
-  background-color: #005A9C !important; /* Primary color */
+  background-color: #005A9C !important;
+  /* Primary color */
 }
 
 .grid-info-title {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .header-container {
-  display: flex;              
-  align-items: center; 
-  justify-content: center;      
-     
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
 }
 
 .logo {
-  width: 200px;                
+  width: 200px;
   max-width: 100%;
   object-fit: contain;
-  margin-right:0%;         
+  margin-right: 0%;
 }
 
 .app-title {
-  font-size: 3rem;          
+  font-size: 3rem;
   font-weight: 600;
   color: var(--text-primary);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -299,7 +335,7 @@ html {
   font-size: 1.5rem;
   font-weight: 600;
   margin: 0;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .address-secondary {
@@ -347,7 +383,7 @@ html {
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 24px; 
+  min-height: 24px;
 }
 
 .editable-field-container .edit-icon {
@@ -376,10 +412,12 @@ html {
 
   max-height: fit-content !important;
 }
+
 .table-group-divider {
   border-top: 2px solid #dee2e6;
-  font-size: small;  
+  font-size: small;
 }
+
 .table td,
 .table th {
   padding: 6px 8px !important;
@@ -388,14 +426,16 @@ html {
   color: var(--text-primary);
 }
 
-.card{
+.card {
 
   height: fit-content;
 }
-.editable-field-pre, .editable-field-span {
+
+.editable-field-pre,
+.editable-field-span {
   width: 100%;
   min-height: 24px;
-  padding-right: 24px; 
+  padding-right: 24px;
 }
 
 .editable-field-pre {
@@ -422,7 +462,7 @@ html {
   transition: visibility 0s, opacity 0.2s linear;
   color: #007bff;
   cursor: pointer;
- 
+
   border-radius: 50%;
   padding: 2px;
 }
@@ -433,16 +473,27 @@ html {
 }
 
 /* --- Specific Card Header Colors (Now unified) --- */
-.CAR1.bg-primary, .CAR1.bg-secondary, .CAR1.bg-info, .CAR1.bg-warning, .CAR1.bg-success, .CAR1.bg-danger, .CAR1.bg-dark, .CAR1.bg-light {
+.CAR1.bg-primary,
+.CAR1.bg-secondary,
+.CAR1.bg-info,
+.CAR1.bg-warning,
+.CAR1.bg-success,
+.CAR1.bg-danger,
+.CAR1.bg-dark,
+.CAR1.bg-light {
   background-color: var(--card-header-bg) !important;
   color: var(--card-header-text) !important;
 }
 
-.full-width-card { grid-column: 1 / -1; }
+.full-width-card {
+  grid-column: 1 / -1;
+}
 
-.table-light, .table-light>th, .table-light>td {
-    background-color: var(--card-bg) !important;
-    color: var(--text-primary) !important;
+.table-light,
+.table-light>th,
+.table-light>td {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
 }
 
 /* --- Percentage Indicator --- */

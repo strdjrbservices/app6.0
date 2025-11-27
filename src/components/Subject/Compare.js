@@ -244,7 +244,7 @@ const Compare = () => {
       formData.append('file', newPdfFile);
       formData.append('form_type', '1004'); // Or make this selectable
       formData.append('revision_request', revisionText);
-      endpoint = 'https://strdjrbservices1.pythonanywhere.com/api/extract/';
+      endpoint = 'https://strdjrbservices2.pythonanywhere.com/api/extract/';
     } else if (mode === 'checklist') {
       if (!oldPdfFile || !newPdfFile) {
         setError('Both Old and New PDF files must be provided for this check.');
@@ -254,7 +254,7 @@ const Compare = () => {
       formData.append('old_pdf_file', oldPdfFile);
       formData.append('new_pdf_file', newPdfFile);
       formData.append('revision_request', CHECKLIST_PROMPT);
-      endpoint = 'https://strdjrbservices1.pythonanywhere.com/api/compare-pdfs/';
+      endpoint = 'https://strdjrbservices2.pythonanywhere.com/api/compare-pdfs/';
     } else if (mode === 'pdf-html') {
       if (!newPdfFile || !htmlFile) {
         setError('Both PDF and HTML files must be provided for this comparison.');
@@ -263,7 +263,7 @@ const Compare = () => {
       }
       formData.append('pdf_file', newPdfFile);
       formData.append('html_file', htmlFile);
-      endpoint = 'https://strdjrbservices1.pythonanywhere.com/api/compare/';
+      endpoint = 'https://strdjrbservices2.pythonanywhere.com/api/compare/';
     } else { // 'pdf-pdf'
       if (!oldPdfFile || !newPdfFile) {
         setError('Both Old and New PDF files must be provided for this comparison.');
@@ -272,7 +272,7 @@ const Compare = () => {
       }
       formData.append('old_pdf_file', oldPdfFile);
       formData.append('new_pdf_file', newPdfFile);
-      endpoint = 'https://strdjrbservices1.pythonanywhere.com/api/compare-pdfs/';
+      endpoint = 'https://strdjrbservices2.pythonanywhere.com/api/compare-pdfs/';
     }
 
     try {

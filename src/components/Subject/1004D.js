@@ -143,7 +143,7 @@ For each item, provide a JSON object in a 'details' array. Each object must have
             formData.append('old_pdf_file', oldPdfFile);
             formData.append('new_pdf_file', newPdfFile);
             formData.append('revision_request', promptText);
-            endpoint = 'https://strdjrbservices1.pythonanywhere.com/api/compare-pdfs/';
+            endpoint = 'https://strdjrbservices2.pythonanywhere.com/api/compare-pdfs/';
         } else { // html-vs-pdf
             if (!htmlFile || !newPdfFile) {
                 setError('Please provide both the HTML and New PDF files.');
@@ -153,7 +153,7 @@ For each item, provide a JSON object in a 'details' array. Each object must have
             formData.append('html_file', htmlFile);
             formData.append('pdf_file', newPdfFile);
             formData.append('comment', promptText);
-            endpoint = 'https://strdjrbservices1.pythonanywhere.com/api/htmlpdf/';
+            endpoint = 'https://strdjrbservices2.pythonanywhere.com/api/htmlpdf/';
         }
 
         try {

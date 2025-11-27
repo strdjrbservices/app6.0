@@ -130,7 +130,7 @@ const CustomQuery = () => {
     formData.append('comment', comment);
 
     try {
-      const res = await fetchWithRetry('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
+      const res = await fetchWithRetry('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });

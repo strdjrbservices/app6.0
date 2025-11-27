@@ -2,21 +2,33 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './Subject.css';
 import { GlobalStyles, keyframes } from '@mui/system';
 import { Info, Warning as WarningIcon, Brightness4 as Brightness4Icon, Brightness7 as Brightness7Icon, Close as CloseIcon, CheckCircleOutline as CheckCircleOutlineIcon, ErrorOutline as ErrorOutlineIcon, KeyboardArrowUp as KeyboardArrowUpIcon } from '@mui/icons-material';
-import { Button, Stack, List, ListItem, ListItemButton, ListItemText, FormControl, InputLabel, Select, MenuItem, IconButton, Tooltip, Paper, Box, Typography, LinearProgress, Alert, Snackbar, Fade, CircularProgress, ThemeProvider, CssBaseline, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid, Fab } from '@mui/material';
+import { Button, Stack, List, ListItem, ListItemButton, ListItemText, FormControl, InputLabel, Select, MenuItem, IconButton, Tooltip, Paper, Box, Typography, LinearProgress, Alert, Snackbar, Fade, CircularProgress, ThemeProvider, CssBaseline, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Fab } from '@mui/material';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 import Form1004 from './1004';
 import Form1007 from './1007';
 import Form1073 from './1073';
-import { EditableField } from './FormComponents';
+import { EditableField, GridInfoCard } from './FormComponents';
 import StateRequirementCheck, { STATE_REQUIREMENTS_PROMPT } from './StateRequirementCheck';
 import UnpaidOkCheck, { UNPAID_OK_PROMPT } from './UnpaidOkCheck';
 import ClientRequirementCheck, { CLIENT_REQUIREMENT_PROMPT } from './ClientRequirementCheck';
 import EscalationCheck, { ESCALATION_CHECK_PROMPT } from './EscalationCheck';
 import FhaCheck, { FHA_REQUIREMENTS_PROMPT } from './FhaCheck';
-import ADUCheck,{ADU_REQUIREMENTS_PROMPT} from './ADUCheck';
+import ADUCheck, { ADU_REQUIREMENTS_PROMPT } from './ADUCheck';
 import { lightTheme, darkTheme } from '../../theme';
+
+// Import all validation functions
+import * as generalValidation from './generalValidation';
+import * as contractValidation from './contractValidation';
+import * as subjectValidation from './subjectValidation';
+import * as siteValidation from './siteValidation';
+import * as neighborhoodValidation from './neighborhoodValidation';
+import * as improvementsValidation from './improvementsValidation';
+import * as salesComparisonValidation from './salesComparisonValidation';
+import * as reconciliationValidation from './reconciliationValidation';
+import * as appraiserLenderValidation from './appraiserLenderValidation';
+
 import uploadSoundFile from '../../Assets/upload.mp3';
 import successSoundFile from '../../Assets/success.mp3';
 import errorSoundFile from '../../Assets/error.mp3';
@@ -231,7 +243,12 @@ const EngagementLetterDialog = ({ open, onClose, onCompare, loading, result, err
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose}>Close</Button>
-        <Button onClick={onCompare} variant="contained" disabled={loading || !selectedFile || !engagementLetterFile}>Review</Button>
+        {!result && (
+          <Button onClick={onCompare} variant="contained" disabled={loading || !selectedFile || !engagementLetterFile}>Compare</Button>
+        )}
+        {result && (
+          <Button onClick={onCompare} variant="contained" disabled={loading}>Reload</Button>
+        )}
       </DialogActions>
     </Dialog>
   );
@@ -574,13 +591,23 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
   //     onPromptSubmit(prompt);
   //   }
   // };
+  const prompt1 =
+    "Verify that the Subject Property Address is identical across all locations in the report including: Subject Section, Sales Comparison Grid, Location Map, Aerial Map, Header/Footer, and any Addenda.\nAlso confirm the presence of the Subject Street View, Front View, and Rear View photos with no duplicates or mislabeled subject photos.";
 
-  const prompt1 = "Verify that the subject property address is consistent across the Subject section, Sales Grid, Location Map, and Aerial Map.\nAlso please confirm subject street, front and rear photo are present and no duplicates.";
-  const prompt2 = "1.Compare the bedroom and bathroom counts between the Improvements section, Sales Grid, and all available floor plans/ sktech/ building sketch and all photos. 2.Check for any discrepancies in the Gross Living Area (GLA) across all sections of the report";
-  const prompt4 = "Match all comparable property addresses between the Sales Grid, photo pages, and the Location Map. Also please confirm no duplicates.";
-  const prompt5 = "Verify all Photo labels and no duplicate photos.";
-  const prompt6 = "Please check and verify if below revision requests are addressed in the file.&#10;&#10;The date lease begins of rental comp# 3 is noted as Owner, please revise&#10;&#10;If addressed by comments, please verify if particular section is updated.&#10;&#10;If addressed, provide answer as revision and state corrected or not corrected. Keep it short.&#10;&#10;Below are extra points to confirm, don't address or treat as revision, just verify&#10;&#10;Also, please check if any checkboxes, or field are blank, if yes highlight in short&#10;&#10;consider below,&#10;&#10;if assignment type is refinance, then contract section should be blank, even checkboxes.&#10;&#10;If purchase, the appropriate field and checkboxes should be marked.&#10;&#10;In garage, check and validate according to checkboxes marked. &#10;&#10;Check if appraised value is matched at in total 4 locations.&#10;&#10;The signature date should be greater than effective date. Effective date is as of date.&#10;&#10;In signature page Company Name/AMC Name should include Fastapp&#10;&#10;Check for prior services, exposure comment, check is appraiser invoice is attached if yes need to remove.&#10;&#10;Please answer 1 per line not in paragraph 3.Check if the following sections are present in the PDF. For each, only answer 'Present' or 'Not Present': This Report is one of the following types:, Comments on Standards Rule 2-3, Reasonable Exposure Time, Comments on Appraisal and Report Identification:";
-  const supplementalAddendumPrompt = "1.Check if the following sections are present in the PDF. For each, only answer 'Present' or 'Not Present': SUPPLEMENTAL ADDENDUM, ADDITIONAL COMMENTS, APPRAISER'S CERTIFICATION:, SUPERVISORY APPRAISER'S CERTIFICATION:, Analysis/Comments, GENERAL INFORMATION ON ANY REQUIRED REPAIRS, UNIFORM APPRAISAL DATASET (UAD) DEFINITIONS ADDENDUM 2.Check if the following sections are present in the PDF. For each, only answer 'Present' or 'Not Present': SCOPE OF WORK:, INTENDED USE:, INTENDED USER:, DEFINITION OF MARKET VALUE:, STATEMENT OF ASSUMPTIONS AND LIMITING CONDITIONS";
+  const prompt2 =
+    "1. Compare bedroom and bathroom counts across the Improvements/Property Characteristics section, Sales Comparison Grid, Sketch/Floor Plan, and all interior/exterior photos.\n2. Verify that Gross Living Area (GLA) is consistent between the Sketch, Improvements section, Sales Grid, Cost Approach (if present), and Addendum comments. Flag any mismatch.";
+
+  const prompt4 =
+    "Match all Comparable Sale addresses across the Sales Grid, Comparable Photo Pages, MLS/Map Exhibits, Location Map, and Aerial Map. Confirm that no comparable photos are duplicated, mislabeled, or incorrectly associated with the wrong comparable.";
+
+  const prompt5 =
+    "Verify that every photo is properly labeled (Subject, Comp 1, Comp 2, etc.) and confirm that there are no duplicate photos, reused photos, or mislabeled views across the entire photo section.";
+
+  const prompt6 =
+    "Please confirm whether the following revision request is addressed in the file:&#10;&#10;• The lease begin date for Rental Comp #3 is incorrectly shown as 'Owner'. Confirm if corrected.&#10;&#10;If addressed in comments, confirm that the corresponding section was updated in the main form.&#10;&#10;For each revision item, answer only: 'Revised – Corrected', 'Revised – Not Corrected', or 'Not Addressed'. Keep responses short.&#10;&#10;Additional Verification (do NOT treat as revisions):&#10;&#10;• Identify any blank fields or unchecked/incorrect checkboxes throughout the form.&#10;• If assignment type is Refinance → Contract Section must be blank (including checkboxes).&#10;• If Purchase → Contract Section fields and checkboxes must be accurately completed.&#10;• Validate Garage/Carport count and type based on the checkboxes marked.&#10;• Verify Appraised Value matches in all required locations: Page 2 (Sales Grid Conclusion), Summary Section, Addendum (if repeated), and Signature Page.&#10;• Signature Date must be after the Effective/As-of Date.&#10;• Signature Page must include 'Fastapp' in the Company/AMC name.&#10;• Check prior services disclosure, exposure time comment, and confirm no appraiser invoice is included. If present, mark as must-remove.&#10;&#10;Now verify presence of the following sections. Answer only 'Present' or 'Not Present': This Report is One of the Following Types:, Comments on Standards Rule 2-3, Reasonable Exposure Time, Comments on Appraisal and Report Identification.";
+
+  const supplementalAddendumPrompt =
+    "1. Confirm presence of the following sections and answer only 'Present' or 'Not Present': SUPPLEMENTAL ADDENDUM, ADDITIONAL COMMENTS, APPRAISER'S CERTIFICATION, SUPERVISORY APPRAISER'S CERTIFICATION, Analysis/Comments, GENERAL INFORMATION ON ANY REQUIRED REPAIRS, UNIFORM APPRAISAL DATASET (UAD) DEFINITIONS ADDENDUM.&#10;&#10;2. Confirm presence of the following sections and answer only 'Present' or 'Not Present': SCOPE OF WORK, INTENDED USE, INTENDED USER, DEFINITION OF MARKET VALUE, STATEMENT OF ASSUMPTIONS AND LIMITING CONDITIONS.";
 
 
   const renderResponse = (response) => {
@@ -729,104 +756,109 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
     </div>
   );
 };
-const ComparisonDialog = ({ open, onClose, data, onDataChange }) => {
-  const fields = [
-    'Client Name', 'Client Address', 'Transaction Type', 'FHA Case Number', 'Borrower (and Co-Borrower)',
-    'Property Address', 'Property County', 'Property Type', 'Assigned to Vendor(s)', 'AMC Reg. Number',
-    'Client Name', 'Client Address', 'Transaction Type', 'FHA Case Number',
-    'Borrower (and Co-Borrower)', 'Property Address', 'Property County',
-    'Property Type', 'Assigned to Vendor(s)', 'AMC Reg. Number',
-    'Appraisal Type', 'Unit Number', 'UAD XML Report'
-  ];
-  const [loading, setLoading] = useState(false);
+const ComparisonDialog = ({ open, onClose, data, onDataChange, pdfFile, htmlFile, setComparisonData }) => {
+  // const fields = [
+  //   'Client Name', 'Client Address', 'Transaction Type', 'FHA Case Number', 'Borrower (and Co-Borrower)',
+  //   'Property Address', 'Property County', 'Property Type', 'Assigned to Vendor(s)', 'AMC Reg. Number',
+  //   'Client Name', 'Client Address', 'Transaction Type', 'FHA Case Number',
+  //   'Borrower (and Co-Borrower)', 'Property Address', 'Property County',
+  //   'Property Type', 'Assigned to Vendor(s)', 'AMC Reg. Number',
+  //   'Appraisal Type', 'Unit Number', 'UAD XML Report'
+  // ];
+  // const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
+  // const [error, setError] = useState('');
 
-  const handleCompare = async () => {
-    setLoading(true);
+  const handleCompare = React.useCallback(async () => {
+    // setLoading(true);
     setResult(null);
-    setError('');
+    // setError('');
 
     const formData = new FormData();
-    // These files need to be passed down or accessed from a higher-level state
-    // For now, assuming they are passed as props `pdfFile` and `htmlFile`
-    // This will require a change where this component is used.
-    formData.append('pdf_file', data.pdfFile);
-    formData.append('html_file', data.htmlFile);
+    if (pdfFile) formData.append('pdf_file', pdfFile);
+    if (htmlFile) formData.append('html_file', htmlFile);
+
     Object.entries(data.comparisonData).forEach(([key, value]) => {
       formData.append(key, value);
     });
 
     try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/compare/', { method: 'POST', body: formData });
+      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/compare/', { method: 'POST', body: formData });
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(errorText || 'PDF-HTML comparison failed.');
       }
       const apiResult = await res.json();
-      setResult(apiResult.comparison_results || []);
+      setComparisonData(prev => ({ ...prev, ...apiResult }));
     } catch (err) {
-      setError(err.message);
+      // setError(err.message);
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
-  };
+  }, [data.comparisonData, pdfFile, htmlFile, setComparisonData]);
 
-  const handleClose = () => {
-    setResult(null);
-    setError('');
-    setLoading(false);
-    onClose();
-  };
+  useEffect(() => {
+    if (open && !result) {
+      handleCompare();
+    }
+  }, [open, result, handleCompare]);
 
-  return (
-    <Dialog open={open} onClose={handleClose} maxWidth={result ? "md" : "sm"} fullWidth>
-      <DialogTitle>
-        {result ? 'Comparison Result' : 'Confirm Details for Comparison'}
-        <IconButton
-          aria-label="close"
-          onClick={handleClose}
-          sx={{ position: 'absolute', right: 8, top: 8, color: (theme) => theme.palette.grey[500] }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent>
-        {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}><CircularProgress /></Box>}
-        {error && <Alert severity="error" sx={{ my: 2 }}>{error}</Alert>}
-        {result && (
-          <ComparisonResultTable result={result} />
-        )}
-        {!loading && !result && (
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {fields.map(field => (
-              <TextField
-                key={field}
-                label={field}
-                fullWidth
-                variant="outlined"
-                value={data.comparisonData[field] || ''}
-                onChange={(e) => onDataChange(field, e.target.value)}
-              />
-            ))}
-          </Stack>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose}>Close</Button>
-        {!result && (
-          <Button onClick={handleCompare} variant="contained" disabled={loading}>
-            Compare
-          </Button>
-        )}
-        {result && (
-          <Button onClick={handleCompare} variant="contained" disabled={loading}>
-            Reload
-          </Button>
-        )}
-      </DialogActions>
-    </Dialog>
-  );
+  // const handleClose = () => {
+  //   setResult(null);
+  //   setError('');
+  //   setLoading(false);
+  //   onClose();
+  // };
+
+  // return (
+  //   <Dialog open={open} onClose={handleClose} maxWidth={result ? "md" : "sm"} fullWidth>
+  //     <DialogTitle>
+  //       {result ? 'Comparison Result' : 'Confirm Details for Comparison'}
+  //       <IconButton
+  //         aria-label="close"
+  //         onClick={handleClose}
+  //         sx={{ position: 'absolute', right: 8, top: 8, color: (theme) => theme.palette.grey[500] }}
+  //       >
+  //         <CloseIcon />
+  //       </IconButton>
+  //     </DialogTitle>
+  //     <DialogContent>
+  //       {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}><CircularProgress /></Box>}
+  //       {error && <Alert severity="error" sx={{ my: 2 }}>{error}</Alert>}
+  //       {result && (
+  //         <ComparisonResultTable result={result.comparison_results || []} />
+  //       )}
+  //       {!loading && !result && (
+  //         <Stack spacing={2} sx={{ mt: 1 }}>
+  //           {fields.map(field => (
+  //             <TextField
+  //               key={field}
+  //               label={field}
+  //               fullWidth
+  //               variant="outlined"
+  //               value={data.comparisonData[field] || ''}
+  //               onChange={(e) => onDataChange(field, e.target.value)}
+  //             />
+  //           ))}
+  //         </Stack>
+  //       )}
+  //     </DialogContent>
+  //     <DialogActions>
+  //       <Button onClick={handleClose}>Close</Button>
+  //       {!result && (
+  //         <Button onClick={handleCompare} variant="contained" disabled={loading}>
+  //           Compare
+  //         </Button>
+  //       )}
+  //       {result && (
+  //         <Button onClick={handleCompare} variant="contained" disabled={loading}>
+  //           Reload
+  //         </Button>
+  //       )}
+
+  //     </DialogActions>
+  //   </Dialog>
+  // );
 };
 
 const ComparisonResultTable = ({ result }) => {
@@ -996,6 +1028,333 @@ function Subject() {
 
   const isUnpaidOkLender = data['Lender/Client'] && unpaidOkLenders.some(lender => data['Lender/Client'].toLowerCase().includes(lender));
 
+  const buildValidationRegistry = () => {
+    const registry = {
+      // Site Validations
+      'Zoning Compliance': [siteValidation.checkZoning],
+      'Zoning Description': [siteValidation.checkZoningDescription],
+      'Specific Zoning Classification': [siteValidation.checkSpecificZoningClassification, neighborhoodValidation.checkSpecificZoningClassification],
+      'Is the highest and best use of subject property as improved (or as proposed per plans and specifications) the present use?': [siteValidation.checkHighestAndBestUse],
+      'FEMA Special Flood Hazard Area': [siteValidation.checkFemaInconsistency, siteValidation.checkFemaFieldsConsistency],
+      'FEMA Flood Zone': [siteValidation.checkFemaInconsistency, siteValidation.checkFemaFieldsConsistency],
+      'FEMA Map #': [siteValidation.checkFemaFieldsConsistency],
+      'FEMA Map Date': [siteValidation.checkFemaFieldsConsistency],
+      'Dimensions': [siteValidation.checkSiteSectionBlank],
+      'Shape': [siteValidation.checkSiteSectionBlank],
+      'View': [siteValidation.checkSiteSectionBlank],
+      'Area': [siteValidation.checkArea],
+      'Are the utilities and off-site improvements typical for the market area? If No, describe': [(field, text, data) => siteValidation.checkYesNoWithComment(field, text, data, { name: 'Are the utilities and off-site improvements typical for the market area? If No, describe', wantedValue: 'yes', unwantedValue: 'no' })],
+      'Are there any adverse site conditions or external factors (easements, encroachments, environmental conditions, land uses, etc.)? If Yes, describe': [(field, text, data) => siteValidation.checkYesNoWithComment(field, text, data, { name: 'Are there any adverse site conditions or external factors (easements, encroachments, environmental conditions, land uses, etc.)? If Yes, describe', wantedValue: 'no', unwantedValue: 'yes' })],
+      "Electricity": [siteValidation.checkUtilities], "Gas": [siteValidation.checkUtilities], "Water": [siteValidation.checkUtilities], "Sanitary Sewer": [siteValidation.checkUtilities], "Street": [siteValidation.checkUtilities], "Alley": [siteValidation.checkUtilities],
+
+      // Subject Validations
+      'Tax Year': [subjectValidation.checkTaxYear],
+      'R.E. Taxes $': [subjectValidation.checkRETaxes],
+      'Special Assessments $': [subjectValidation.checkSpecialAssessments],
+      'PUD': [subjectValidation.checkPUD, subjectValidation.checkHOA],
+      'HOA $': [subjectValidation.checkHOA],
+      'Offered for Sale in Last 12 Months': [subjectValidation.checkOfferedForSale],
+      'ANSI': [subjectValidation.checkAnsi],
+      'Property Address': [generalValidation.checkSubjectFieldsNotBlank, salesComparisonValidation.checkSubjectAddressInconsistency],
+      'County': [generalValidation.checkSubjectFieldsNotBlank],
+      'Borrower': [generalValidation.checkSubjectFieldsNotBlank],
+      'Owner of Public Record': [generalValidation.checkSubjectFieldsNotBlank],
+      'Legal Description': [generalValidation.checkSubjectFieldsNotBlank],
+      "Assessor's Parcel #": [generalValidation.checkSubjectFieldsNotBlank],
+      'Neighborhood Name': [generalValidation.checkSubjectFieldsNotBlank],
+      'Map Reference': [generalValidation.checkSubjectFieldsNotBlank],
+      'Census Tract': [generalValidation.checkSubjectFieldsNotBlank],
+      'Occupant': [generalValidation.checkSubjectFieldsNotBlank],
+      'Property Rights Appraised': [generalValidation.checkSubjectFieldsNotBlank],
+      'Lender/Client': [generalValidation.checkSubjectFieldsNotBlank, appraiserLenderValidation.checkLenderNameInconsistency],
+      'Address (Lender/Client)': [generalValidation.checkSubjectFieldsNotBlank, appraiserLenderValidation.checkLenderAddressInconsistency],
+
+      // Neighborhood Validations
+      'one unit housing price(high,low,pred)': [neighborhoodValidation.checkHousingPriceAndAge, neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+      'one unit housing age(high,low,pred)': [neighborhoodValidation.checkHousingPriceAndAge, neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+      "One-Unit": [neighborhoodValidation.checkNeighborhoodUsageConsistency, neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+      "2-4 Unit": [neighborhoodValidation.checkNeighborhoodUsageConsistency, neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+      "Multi-Family": [neighborhoodValidation.checkNeighborhoodUsageConsistency, neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+      "Commercial": [neighborhoodValidation.checkNeighborhoodUsageConsistency, neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+      "Other": [neighborhoodValidation.checkNeighborhoodUsageConsistency, neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+      "Neighborhood Boundaries": [neighborhoodValidation.checkNeighborhoodBoundaries, neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+      "Built-Up": [neighborhoodValidation.checkSingleChoiceFields, neighborhoodValidation.checkNeighborhoodFieldsNotBlank], "Growth": [neighborhoodValidation.checkSingleChoiceFields, neighborhoodValidation.checkNeighborhoodFieldsNotBlank], "Property Values": [neighborhoodValidation.checkSingleChoiceFields, neighborhoodValidation.checkNeighborhoodFieldsNotBlank], "Demand/Supply": [neighborhoodValidation.checkSingleChoiceFields, neighborhoodValidation.checkNeighborhoodFieldsNotBlank], "Marketing Time": [neighborhoodValidation.checkSingleChoiceFields, neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+      "Neighborhood Description": [neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+      "Market Conditions:": [neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+
+      // Improvements Validations
+      'Units': [improvementsValidation.checkUnits, improvementsValidation.checkAccessoryUnit],
+      '# of Stories': [improvementsValidation.checkNumberOfStories],
+      'Type': [improvementsValidation.checkPropertyType],
+      'Existing/Proposed/Under Const.': [improvementsValidation.checkConstructionStatusAndReconciliation],
+      'Design (Style)': [improvementsValidation.checkDesignStyle, salesComparisonValidation.checkDesignStyleAdjustment],
+      'Year Built': [improvementsValidation.checkYearBuilt],
+      'Effective Age (Yrs)': [improvementsValidation.checkEffectiveAge],
+      'Additional features': [improvementsValidation.checkAdditionalFeatures],
+      'Describe the condition of the property': [improvementsValidation.checkPropertyConditionDescription],
+      'Are there any physical deficiencies or adverse conditions that affect the livability, soundness, or structural integrity of the property? If Yes, describe': [improvementsValidation.checkPhysicalDeficienciesImprovements],
+      'Does the property generally conform to the neighborhood (functional utility, style, condition, use, construction, etc.)? If No, describe': [improvementsValidation.checkNeighborhoodConformity],
+      'Foundation Type': [improvementsValidation.checkFoundationType],
+      'Basement Area sq.ft.': [improvementsValidation.checkBasementDetails],
+      'Basement Finish %': [improvementsValidation.checkBasementDetails],
+      'Infestation': [improvementsValidation.checkEvidenceOf], 'Dampness': [improvementsValidation.checkEvidenceOf], 'Settlement': [improvementsValidation.checkEvidenceOf],
+      'Foundation Walls (Material/Condition)': [improvementsValidation.checkMaterialCondition], 'Exterior Walls (Material/Condition)': [improvementsValidation.checkMaterialCondition],
+      'Roof Surface (Material/Condition)': [improvementsValidation.checkMaterialCondition], 'Gutters & Downspouts (Material/Condition)': [improvementsValidation.checkMaterialCondition],
+      'Window Type (Material/Condition)': [improvementsValidation.checkMaterialCondition], 'Floors (Material/Condition)': [improvementsValidation.checkMaterialCondition],
+      'Walls (Material/Condition)': [improvementsValidation.checkMaterialCondition],
+      'Trim/Finish (Material/Condition)': [improvementsValidation.checkMaterialCondition],
+      'Bath Floor (Material/Condition)': [improvementsValidation.checkMaterialCondition], 'Bath Wainscot (Material/Condition)': [improvementsValidation.checkMaterialCondition],
+      'Fuel': [improvementsValidation.checkHeatingFuel, improvementsValidation.checkImprovementsFieldsNotBlank],
+      'Car Storage': [improvementsValidation.checkCarStorage, improvementsValidation.checkImprovementsFieldsNotBlank],
+
+      // Sales Comparison Validations
+      'Address': [salesComparisonValidation.checkSubjectAddressInconsistency],
+      'Condition': [salesComparisonValidation.checkConditionAdjustment], 'Condition Adjustment': [salesComparisonValidation.checkConditionAdjustment],
+      'Bedrooms': [salesComparisonValidation.checkBedroomsAdjustment], 'Bedrooms Adjustment': [salesComparisonValidation.checkBedroomsAdjustment],
+      'Baths': [salesComparisonValidation.checkBathsAdjustment], 'Baths Adjustment': [salesComparisonValidation.checkBathsAdjustment],
+      'Quality of Construction': [salesComparisonValidation.checkQualityOfConstructionAdjustment], 'Quality of Construction Adjustment': [salesComparisonValidation.checkQualityOfConstructionAdjustment],
+      'Proximity to Subject': [salesComparisonValidation.checkProximityToSubject],
+      'Site': [salesComparisonValidation.checkSiteAdjustment], 'Site Adjustment': [salesComparisonValidation.checkSiteAdjustment],
+      'Gross Living Area': [salesComparisonValidation.checkGrossLivingAreaAdjustment], 'Gross Living Area Adjustment': [salesComparisonValidation.checkGrossLivingAreaAdjustment],
+      'Design (Style) Adjustment': [salesComparisonValidation.checkDesignStyleAdjustment],
+      'Functional Utility': [salesComparisonValidation.checkFunctionalUtilityAdjustment], 'Functional Utility Adjustment': [salesComparisonValidation.checkFunctionalUtilityAdjustment],
+      'Energy Efficient Items': [salesComparisonValidation.checkEnergyEfficientItemsAdjustment], 'Energy Efficient Items Adjustment': [salesComparisonValidation.checkEnergyEfficientItemsAdjustment],
+      'Porch/Patio/Deck': [salesComparisonValidation.checkPorchPatioDeckAdjustment], 'Porch/Patio/Deck Adjustment': [salesComparisonValidation.checkPorchPatioDeckAdjustment],
+      'Heating/Cooling': [salesComparisonValidation.checkHeatingCoolingAdjustment], 'Heating/Cooling Adjustment': [salesComparisonValidation.checkHeatingCoolingAdjustment],
+      'Data Source(s)': [salesComparisonValidation.checkDataSourceDOM],
+      'Actual Age': [salesComparisonValidation.checkActualAgeAdjustment], 'Actual Age Adjustment': [salesComparisonValidation.checkActualAgeAdjustment],
+      'Sale Price': [salesComparisonValidation.checkSalePrice],
+      'Leasehold/Fee Simple': [salesComparisonValidation.checkLeaseholdFeeSimpleConsistency],
+      'Date of Sale/Time': [salesComparisonValidation.checkDateOfSale],
+      'Location': [salesComparisonValidation.checkLocationConsistency, neighborhoodValidation.checkLocation, neighborhoodValidation.checkNeighborhoodFieldsNotBlank],
+
+      // Reconciliation Validations
+      'Indicated Value by Sales Comparison Approach $': [reconciliationValidation.checkFinalValueConsistency],
+      'Indicated Value by: Sales Comparison Approach $': [reconciliationValidation.checkFinalValueConsistency, reconciliationValidation.checkCostApproachDeveloped],
+      'opinion of the market value, as defined, of the real property that is the subject of this report is $': [reconciliationValidation.checkFinalValueConsistency],
+      'APPRAISED VALUE OF SUBJECT PROPERTY $': [reconciliationValidation.checkFinalValueConsistency],
+      'Cost Approach (if developed)': [reconciliationValidation.checkCostApproachDeveloped],
+      'This appraisal is made "as is", subject to completion per plans and specifications on the basis of a hypothetical condition that the improvements have been completed, subject to the following repairs or alterations on the basis of a hypothetical condition that the repairs or alterations have been completed, or subject to the following required inspection based on the extraordinary assumption that the condition or deficiency does not require alteration or repair:': [reconciliationValidation.checkAppraisalCondition],
+      'as of': [reconciliationValidation.checkAsOfDate],
+      'final value': [reconciliationValidation.checkFinalValueBracketing, reconciliationValidation.checkReconciliationFieldsNotBlank, reconciliationValidation.checkFinalValueConsistency],
+
+      // General Validations
+      'Assignment Type': [generalValidation.checkAssignmentTypeConsistency],
+
+      // Contract Validations
+      "I did did not analyze the contract for sale for the subject purchase transaction. Explain the results of the analysis of the contract for sale or why the analysis was not performed.": [contractValidation.checkContractFieldsMandatory, contractValidation.checkContractAnalysisConsistency],
+      "Contract Price $": [contractValidation.checkContractFieldsMandatory, contractValidation.checkContractAnalysisConsistency],
+      "Date of Contract": [contractValidation.checkContractFieldsMandatory, contractValidation.checkContractAnalysisConsistency],
+      "Is property seller owner of public record?": [contractValidation.checkContractAnalysisConsistency, (field, text, data) => contractValidation.checkYesNoOnly(field, text, data, { name: 'Is property seller owner of public record?' })],
+      "Data Source(s) (Contract)": [contractValidation.checkContractFieldsMandatory, contractValidation.checkContractAnalysisConsistency],
+      "Is there any financial assistance (loan charges, sale concessions, gift or downpayment assistance, etc.) to be paid by any party on behalf of the borrower?": [contractValidation.checkContractAnalysisConsistency, (field, text, data) => contractValidation.checkYesNoOnly(field, text, data, { name: 'Is there any financial assistance (loan charges, sale concessions, gift or downpayment assistance, etc.) to be paid by any party on behalf of the borrower?' }), contractValidation.checkFinancialAssistanceInconsistency],
+      "If Yes, report the total dollar amount and describe the items to be paid": [contractValidation.checkFinancialAssistanceInconsistency, contractValidation.checkContractAnalysisConsistency],
+    };
+    return registry;
+  };
+
+  const getValidationErrors = () => {
+    const errors = [];
+    if (!data || Object.keys(data).length === 0) {
+      return errors;
+    }
+
+    const validationRegistry = buildValidationRegistry();
+    const allData = data;
+
+    const runChecksForField = (sectionName, fieldName, value, path, saleName = null) => {
+      const validationFns = validationRegistry[fieldName] || [];
+      for (const fn of validationFns) {
+        try {
+          const result = fn(fieldName, value, allData, path, saleName);
+          if (result && result.isError) {
+            errors.push([sectionName, `${fieldName}${saleName ? ` (${saleName})` : ''}`, result.message]);
+            break; // Stop on first error for this field
+          }
+        } catch (e) {
+          // console.error(`Error validating ${fieldName} in ${sectionName}:`, e);
+        }
+      }
+    };
+
+    // Iterate over all sections and fields in the data
+    Object.keys(allData).forEach(sectionKey => {
+      const sectionData = allData[sectionKey];
+      if (typeof sectionData === 'object' && sectionData !== null) {
+        Object.keys(sectionData).forEach(fieldKey => {
+          const value = sectionData[fieldKey];
+          const path = [sectionKey, fieldKey];
+          runChecksForField(sectionKey, fieldKey, value, path);
+        });
+      } else {
+        // For root level fields
+        const value = allData[sectionKey];
+        const path = [sectionKey];
+        runChecksForField('General', sectionKey, value, path);
+      }
+    });
+
+    // Special handling for Sales Comparison Grid
+    comparableSales.forEach(saleName => {
+      if (allData[saleName]) {
+        Object.keys(allData[saleName]).forEach(fieldKey => {
+          const value = allData[saleName][fieldKey];
+          const path = [saleName, fieldKey];
+          runChecksForField('Sales Comparison', fieldKey, value, path, saleName);
+        });
+      }
+    });
+
+    return errors;
+  };
+
+  const handleGenerateErrorLog = () => {
+    if (Object.keys(data).length === 0) {
+      setNotification({ open: true, message: 'No data to generate an error log.', severity: 'warning' });
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 15;
+    let yPos = margin;
+
+    const addHeaderFooter = () => {
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text('Error Log Report', margin, 10);
+        doc.text(new Date().toLocaleDateString(), doc.internal.pageSize.width - margin, 10, { align: 'right' });
+        doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.width / 2, pageHeight - 10, { align: 'center' });
+      }
+    };
+
+    const addSection = (title, head, body) => {
+      if (body.length === 0) return;
+
+      if (yPos > pageHeight - 40) {
+        doc.addPage();
+        yPos = margin;
+      }
+
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(40);
+      doc.text(title, margin, yPos);
+      yPos += 8;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [head],
+        body: body,
+        theme: 'grid',
+        headStyles: { fillColor: [200, 0, 0], textColor: 255 },
+        didDrawPage: (data) => { yPos = data.cursor.y + 10; },
+      });
+      yPos = doc.lastAutoTable.finalY + 10;
+    };
+
+    // 1. Missing Fields
+    const missingFields = [];
+    if (extractionAttempted) {
+      const allFields = [
+        ...subjectFields.map(f => ({ section: 'Subject', field: f, path: ['Subject', f] })),
+        ...contractFields.map(f => ({ section: 'Contract', field: f, path: ['CONTRACT', f] })),
+        ...neighborhoodFields.map(f => ({ section: 'Neighborhood', field: f, path: ['NEIGHBORHOOD', f] })),
+        ...siteFields.map(f => ({ section: 'Site', field: f, path: ['SITE', f] })),
+        ...improvementsFields.map(f => ({ section: 'Improvements', field: f, path: ['IMPROVEMENTS', f] })),
+        ...reconciliationFields.map(f => ({ section: 'Reconciliation', field: f, path: ['RECONCILIATION', f] })),
+        ...incomeApproachFields.map(f => ({ section: 'Income Approach', field: f, path: ['INCOME_APPROACH', f] })),
+        ...costApproachFields.map(f => ({ section: 'Cost Approach', field: f, path: ['COST_APPROACH', f] })),
+        ...pudInformationFields.map(f => ({ section: 'PUD Information', field: f, path: ['PUD_INFO', f] })),
+        ...appraiserFields.map(f => ({ section: 'Appraiser/Certification', field: f, path: ['CERTIFICATION', f] })),
+        ...marketConditionsFields.map(f => ({ section: 'Market Conditions', field: f, path: ['MARKET_CONDITIONS', f] })),
+        ...salesHistoryFields.map(f => ({ section: 'Sales History', field: f, path: ['SALES_HISTORY', f] })),
+        ...salesComparisonAdditionalInfoFields.map(f => ({ section: 'Sales Comparison Additional Info', field: f, path: ['SALES_TRANSFER', f] })),
+        ...infoOfSalesFields.map(f => ({ section: 'Info of Sales', field: f, path: ['INFO_OF_SALES', f] })),
+        ...projectSiteFields.map(f => ({ section: 'Project Site', field: f, path: ['PROJECT_SITE', f] })),
+        ...projectInfoFields.map(f => ({ section: 'Project Information', field: f, path: ['PROJECT_INFO', f] })),
+        ...projectAnalysisFields.map(f => ({ section: 'Project Analysis', field: f, path: ['PROJECT_ANALYSIS', f] })),
+        ...unitDescriptionsFields.map(f => ({ section: 'Unit Descriptions', field: f, path: ['UNIT_DESCRIPTIONS', f] })),
+        ...priorSaleHistoryFields.map(f => ({ section: 'Prior Sale History', field: f, path: ['PRIOR_SALE_HISTORY', f] })),
+      ];
+
+      allFields.forEach(({ section, field, path }) => {
+        let value = data;
+        for (const key of path) {
+          value = value?.[key];
+        }
+        if (value === undefined || value === null || value === '') {
+          missingFields.push([section, field]);
+        }
+      });
+    }
+    addSection('Missing Fields', ['Section', 'Field'], missingFields);
+
+    // 2. Requirement Check Errors
+    const requirementErrors = [];
+    const checks = [
+      { name: 'Client Requirements', response: clientReqResponse },
+      { name: 'State Requirements', response: stateReqResponse },
+      { name: 'FHA Requirements', response: fhaResponse },
+      { name: 'ADU Requirements', response: ADUResponse },
+      { name: 'Escalation Points', response: escalationResponse },
+    ];
+
+    checks.forEach(check => {
+      if (check.response && Array.isArray(check.response.details)) {
+        check.response.details.forEach(item => {
+          if (item.status === 'Not Fulfilled' || item.status === 'Needs Review') {
+            requirementErrors.push([check.name, item.requirement, item.status, item.value_or_comment]);
+          }
+        });
+      }
+    });
+    addSection('Requirement Check Issues', ['Check', 'Requirement', 'Status', 'Comment'], requirementErrors);
+
+    // 3. Field Validation Errors
+    const validationErrors = getValidationErrors(data);
+    addSection('Field Validation Errors', ['Section', 'Field', 'Error Message'], validationErrors);
+
+    // 3. Comparable Address Consistency
+    const addressInconsistencies = [];
+    const getFirstThreeWords = (str) => str ? str.split(/\s+/).slice(0, 3).join(' ').toLowerCase() : '';
+
+    comparableSales.forEach((sale, index) => {
+      const compNum = index + 1;
+      const salesGridAddress = data[sale]?.Address || '';
+      const locationMapAddress = data[`Location Map Address ${compNum}`] || '';
+      const photoAddress = data[`Comparable Photo Address ${compNum}`] || '';
+
+      const allAddresses = [salesGridAddress, locationMapAddress, photoAddress];
+      const validAddresses = allAddresses.filter(Boolean);
+
+      let isConsistent = false;
+      if (validAddresses.length < 2) {
+        isConsistent = true;
+      } else {
+        const shortAddresses = validAddresses.map(getFirstThreeWords);
+        const uniqueShortAddresses = new Set(shortAddresses);
+        // The logic here seems to check if there's at least one duplicate, not if all are the same.
+        // Sticking to the UI logic. For full consistency, it should be uniqueShortAddresses.size === 1.
+        if (uniqueShortAddresses.size < shortAddresses.length) {
+          isConsistent = true;
+        }
+      }
+
+      if (!isConsistent) {
+        addressInconsistencies.push([`Comp #${compNum}`, salesGridAddress, locationMapAddress, photoAddress]);
+      }
+    });
+    addSection('Comparable Address Inconsistencies', ['Comparable', 'Sales Grid Address', 'Location Map Address', 'Photo Address'], addressInconsistencies);
+
+    // Finalize PDF
+    addHeaderFooter();
+    doc.save('Appraisal_Error_Log.pdf');
+    setNotification({ open: true, message: 'Error log generated successfully.', severity: 'success' });
+  };
 
   const fileUploadTimerRef = useRef(null);
 
@@ -1061,7 +1420,7 @@ function Subject() {
         });
 
         setComparisonData(extractedData);
-        setIsComparisonDialogOpen(true);
+        // setIsComparisonDialogOpen(true); // Prevent automatic dialog opening
         setNotification({ open: true, message: 'HTML data extracted. Please review.', severity: 'success' });
       };
       reader.readAsText(file);
@@ -1072,10 +1431,10 @@ function Subject() {
     const file = e.target.files && e.target.files[0];
     if (file) {
       setContractFile(file);
-      setNotification({ open: true, message: 'Contract file uploaded.', severity: 'success' });
-      setIsContractCompareOpen(true);
-      setContractCompareResult(null);
-      setContractCompareError('');
+      setNotification({ open: true, message: 'Contract file uploaded. Click "Review Contract" to compare.', severity: 'success' });
+      // setIsContractCompareOpen(true); // Prevent automatic dialog opening
+      // setContractCompareResult(null);
+      // setContractCompareError('');
     }
   };
 
@@ -1093,7 +1452,7 @@ function Subject() {
     formData.append('contract_copy_file', contractFile);
 
     try {
-      const response = await fetch('https://strdjrbservices1.pythonanywhere.com/api/compare-contract/', {
+      const response = await fetch('https://strdjrbservices2.pythonanywhere.com/api/compare-contract/', {
         method: 'POST',
         body: formData,
       });
@@ -1128,7 +1487,7 @@ function Subject() {
     formData.append('engagement_letter_file', engagementLetterFile);
 
     try {
-      const response = await fetch('https://strdjrbservices1.pythonanywhere.com/api/compare-engagement-letter/', {
+      const response = await fetch('https://strdjrbservices2.pythonanywhere.com/api/compare-engagement-letter/', {
         method: 'POST',
         body: formData,
       });
@@ -1154,10 +1513,10 @@ function Subject() {
     const file = e.target.files && e.target.files[0];
     if (file) {
       setEngagementLetterFile(file);
-      setNotification({ open: true, message: 'Engagement letter uploaded.', severity: 'success' });
-      setIsEngagementLetterDialogOpen(true);
-      setEngagementLetterCompareResult(null);
-      setEngagementLetterCompareError('');
+      setNotification({ open: true, message: 'Engagement letter uploaded. Click "Review Letter" to compare.', severity: 'success' });
+      // setIsEngagementLetterDialogOpen(true); // Prevent automatic dialog opening
+      // setEngagementLetterCompareResult(null);
+      // setEngagementLetterCompareError('');
     }
   };
 
@@ -1180,33 +1539,11 @@ function Subject() {
     }));
   };
 
-  const handlePdfHtmlCompare = async () => {
-    if (!selectedFile || !htmlFile) {
-      setNotification({ open: true, message: 'Both PDF and HTML files are required for comparison.', severity: 'warning' });
-      return;
-    }
-    setLoading(true);
-    const formData = new FormData();
-    formData.append('pdf_file', selectedFile);
-    formData.append('html_file', htmlFile);
-    // Append comparison data from the dialog
-    Object.entries(comparisonData).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-
-    try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/compare/', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('PDF-HTML comparison failed.');
-      await res.json();
-      // You can decide what to do with the result, e.g., display it in a new dialog or section.
-      setNotification({ open: true, message: 'PDF-HTML comparison successful!', severity: 'success' });
-    } catch (error) {
-      setNotification({ open: true, message: error.message, severity: 'error' });
-    } finally {
-      setLoading(false);
-      setIsComparisonDialogOpen(false);
-    }
-  };
+  // const handleReviewHtml = () => {
+  //   setIsComparisonDialogOpen(true);
+  //   // This will open the dialog, and we can trigger the comparison from within the dialog
+  //   // when it opens in the "initial" state.
+  // };
 
   useEffect(() => {
     const checkScrollTop = () => {
@@ -1234,9 +1571,8 @@ function Subject() {
   }, [themeMode]);
 
   useEffect(() => {
-    // Cleanup on component unmount
     return () => {
-      localStorage.removeItem('fileUploadStartTime');      
+      localStorage.removeItem('fileUploadStartTime');
       clearInterval(fileUploadTimerRef.current);
     };
   }, []);
@@ -1247,7 +1583,6 @@ function Subject() {
       const elapsedSeconds = Math.floor((Date.now() - parseInt(startTime, 10)) / 1000);
       setFileUploadTimer(elapsedSeconds);
       setIsTimerRunning(true);
-      // We no longer restore the file name from local storage.
     }
   }, []);
 
@@ -1274,7 +1609,7 @@ function Subject() {
     // 'Prior service comment',
     // 'ANSI',
     // 'From Type',
-    'ADU File Check',
+    // 'ADU File Check',
     'Property Address',
     'City',
     'County',
@@ -1683,6 +2018,7 @@ function Subject() {
 
   const sections = useMemo(() => [
     { id: 'subject-info', title: 'Subject', category: 'SUBJECT' }, // Root level data
+    // { id: 'html-data-section', title: 'HTML Data' },
     { id: 'contract-section', title: 'Contract', category: 'CONTRACT' },
     { id: 'neighborhood-section', title: 'Neighborhood', category: 'NEIGHBORHOOD' },
 
@@ -1692,9 +2028,11 @@ function Subject() {
     { id: 'unit-descriptions-section', title: 'Unit Descriptions', category: 'UNIT_DESCRIPTIONS' },
     { id: 'prior-sale-history-section', title: 'Prior Sale History', category: 'PRIOR_SALE_HISTORY' },
     { id: 'site-section', title: 'Site', category: 'SITE' },
-    // { id: 'info-of-sales-section', title: 'Info of Sales', category: 'INFO_OF_SALES'},
+    { id: 'info-of-sales-section', title: 'Info of Sales', category: 'INFO_OF_SALES' },
     { id: 'improvements-section', title: 'Improvements', category: 'IMPROVEMENTS' },
-    { id: 'sales-comparison', title: 'Sales Comparison & History', category: ['SALES_GRID', 'SALES_TRANSFER', 'INFO_OF_SALES'] },
+    { id: 'sales-comparison', title: 'Sales Comparison & History', category: ['SALES_GRID'] },
+    // { id: 'sales-comparison-additional-info', title: 'Sales Comparison Additional Info', category: 'SALES_COMPARISON_ADDITIONAL_INFO' },
+    { id: 'sales-history-section', title: 'Sales History', category: 'SALES_TRANSFER' },
     { id: 'rent-schedule-section', title: 'Comparable Rent Schedule', category: 'RENT_SCHEDULE_GRID' },
     { id: 'reconciliation-section', title: 'Reconciliation', category: 'RECONCILIATION' },
     { id: 'rent-schedule-reconciliation-section', title: 'Rent Schedule Reconciliation', category: 'RENT_SCHEDULE_RECONCILIATION' },
@@ -1894,7 +2232,7 @@ function Subject() {
           setExtractionProgress(prev => (prev < 40 ? prev + 5 : prev));
         }, 500);
 
-        const response = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
+        const response = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
           method: 'POST', body: formData
         });
 
@@ -2056,7 +2394,7 @@ function Subject() {
         formData.append('form_type', selectedFormType);
         formData.append('category', category);
 
-        const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', { method: 'POST', body: formData });
+        const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', { method: 'POST', body: formData });
 
         if (!res.ok) {
           throw new Error(`Failed to extract ${category}`);
@@ -2095,7 +2433,7 @@ function Subject() {
     formData.append('comment', prompt);
 
     try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2182,7 +2520,7 @@ function Subject() {
     formData.append('comment', STATE_REQUIREMENTS_PROMPT);
 
     try {
-      const res = await fetchWithRetry('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
+      const res = await fetchWithRetry('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
 
@@ -2247,7 +2585,7 @@ function Subject() {
     formData.append('comment', UNPAID_OK_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2311,7 +2649,7 @@ function Subject() {
     formData.append('comment', CLIENT_REQUIREMENT_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2372,11 +2710,11 @@ function Subject() {
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('form_type', selectedFormType);
-    // formData.append('comment', ADU_REQUIREMENTS_PROMPT);
+    formData.append('comment', ADU_REQUIREMENTS_PROMPT);
     formData.append('comment', FHA_REQUIREMENTS_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2440,7 +2778,7 @@ function Subject() {
     formData.append('comment', ADU_REQUIREMENTS_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2503,7 +2841,7 @@ function Subject() {
     formData.append('comment', ESCALATION_CHECK_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2623,143 +2961,152 @@ function Subject() {
   const handleGeneratePdf = () => {
     if (Object.keys(data).length === 0) {
       setNotification({ open: true, message: 'No data to generate PDF.', severity: 'warning' });
+      return;
     }
 
     setIsGeneratingPdf(true);
-    try {
-      const doc = new jsPDF();
-      const pageHeight = doc.internal.pageSize.height;
-      const pageWidth = doc.internal.pageSize.width;
-      const margin = 15;
-      let yPos = margin;
+    setTimeout(() => { // Use setTimeout to allow UI to update
+      try {
+        const doc = new jsPDF();
+        const pageHeight = doc.internal.pageSize.height;
+        const pageWidth = doc.internal.pageSize.width;
+        const margin = 15;
+        let yPos = margin;
 
-      const addHeaderFooter = () => {
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-          doc.setPage(i);
-          // Header
-          doc.setFontSize(10);
-          doc.setTextColor(100);
-          doc.text('Appraisal Report Summary', margin, 10);
-          doc.text(new Date().toLocaleDateString(), pageWidth - margin, 10, { align: 'right' });
-          // Footer
-          doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-        }
-      };
-
-      const addSection = (title, sectionFields, sectionData, usePre = false) => {
-        if (!sectionData || sectionFields.every(field => !sectionData[field])) return;
-
-        if (yPos > pageHeight - 40) {
-          doc.addPage();
-          yPos = margin;
-        }
-
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(40);
-        doc.text(title, margin, yPos);
-        yPos += 8;
-
-        const body = sectionFields.map(field => {
-          let value = sectionData[field];
-          if (typeof value === 'object' && value !== null) {
-            value = Object.entries(value).map(([k, v]) => `${k}: ${v}`).join('\n');
+        const addHeaderFooter = () => {
+          const pageCount = doc.internal.getNumberOfPages();
+          for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            // Header
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text('Appraisal Report Summary', margin, 10);
+            doc.text(new Date().toLocaleDateString(), pageWidth - margin, 10, { align: 'right' });
+            // Footer
+            doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
           }
-          return [field, value || ''];
-        }).filter(row => row[1]);
+        };
 
-        if (body.length > 0) {
+        const addSection = (title, sectionFields, sectionData, usePre = false) => {
+          if (!sectionData || sectionFields.every(field => !sectionData[field])) return;
+
+          if (yPos > pageHeight - 40) {
+            doc.addPage();
+            yPos = margin;
+          }
+
+          doc.setFontSize(14);
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(40);
+          doc.text(title, margin, yPos);
+          yPos += 8;
+
+          const body = sectionFields.map(field => {
+            let value = sectionData[field];
+            if (typeof value === 'object' && value !== null) {
+              value = Object.entries(value).map(([k, v]) => `${k}: ${v}`).join('\n');
+            }
+            return [field, value || ''];
+          }).filter(row => row[1]);
+
+          if (body.length > 0) {
+            autoTable(doc, {
+              startY: yPos,
+              head: [['Field', 'Value']],
+              body: body,
+              theme: 'grid',
+              headStyles: { fillColor: [22, 160, 133], textColor: 255 },
+              columnStyles: { 0: { cellWidth: 60 } },
+              didDrawPage: (data) => { yPos = data.cursor.y + 10; },
+              willDrawCell: (data) => {
+                if (data.section === 'body' && usePre) {
+                  doc.setFont('Courier');
+                }
+              }
+            });
+            yPos = doc.lastAutoTable.finalY + 10;
+          } else {
+            yPos -= 8;
+          }
+        };
+
+        const sectionDefinitions = [
+          { id: 'subject-info', title: 'Subject Information', fields: subjectFields, data: data.Subject || data },
+          { id: 'contract-section', title: 'Contract', fields: contractFields, data: data.CONTRACT },
+          { id: 'neighborhood-section', title: 'Neighborhood', fields: neighborhoodFields, data: data.NEIGHBORHOOD },
+          { id: 'site-section', title: 'Site', fields: siteFields, data: data.SITE },
+          { id: 'improvements-section', title: 'Improvements', fields: improvementsFields, data: data.IMPROVEMENTS },
+          { id: 'sales-history-section', title: 'Sales History', fields: salesHistoryFields, data: data.SALES_TRANSFER },
+          { id: 'prior-sale-history-section', title: 'Prior Sale History', fields: priorSaleHistoryFields, data: data.PRIOR_SALE_HISTORY, usePre: true },
+          { id: 'reconciliation-section', title: 'Reconciliation', fields: reconciliationFields, data: data.RECONCILIATION },
+          { id: 'cost-approach-section', title: 'Cost Approach', fields: costApproachFields, data: data.COST_APPROACH },
+          { id: 'income-approach-section', title: 'Income Approach', fields: incomeApproachFields, data: data.INCOME_APPROACH },
+          { id: 'pud-info-section', title: 'PUD Information', fields: pudInformationFields, data: data.PUD_INFO },
+          { id: 'market-conditions-section', title: 'Market Conditions Addendum', fields: marketConditionsFields, data: data.MARKET_CONDITIONS, usePre: true },
+          { id: 'appraiser-section', title: 'Certification/Signature Section', fields: appraiserFields, data: data.CERTIFICATION },
+        ];
+
+        const extractedPdfSections = sectionDefinitions.filter(section =>
+          extractedSections.has(section.id) && section.data && Object.keys(section.data).length > 0
+        );
+
+        extractedPdfSections.forEach(section => {
+          addSection(section.title, section.fields, section.data, section.usePre)
+        });
+
+
+        if (extractedSections.has('sales-comparison') && (data.Subject || comparableSales.some(s => data[s]))) {
+          if (yPos > pageHeight - 60) { doc.addPage(); yPos = margin; }
+          doc.setFontSize(14);
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(40);
+          doc.text('Sales Comparison Approach', margin, yPos);
+          yPos += 8;
+
+          const activeComps = comparableSales.filter(sale => data[sale]);
+          const head = [['Feature', 'Subject', ...activeComps]];
+          const body = salesGridRows.map(row => {
+            const rowData = [row.label];
+            // Subject
+            let subjectValue = data.Subject?.[row.valueKey] || data.Subject?.[row.subjectValueKey] || '';
+            if (row.adjustmentKey && data.Subject?.[row.adjustmentKey]) {
+              subjectValue += `\n(${data.Subject[row.adjustmentKey]})`;
+            }
+            rowData.push(subjectValue);
+            // Comparables
+            activeComps.forEach(sale => {
+              let compValue = data[sale]?.[row.valueKey] || '';
+              if (row.adjustmentKey && data[sale]?.[row.adjustmentKey]) {
+                compValue += `\n(${data[sale][row.adjustmentKey]})`;
+              }
+              rowData.push(compValue);
+            });
+            return rowData;
+          });
+
           autoTable(doc, {
             startY: yPos,
-            head: [['Field', 'Value']],
-            body: body,
+            head,
+            body,
             theme: 'grid',
-            headStyles: { fillColor: [22, 160, 133], textColor: 255 },
-            columnStyles: { 0: { cellWidth: 60 } },
-            didDrawPage: (data) => { yPos = data.cursor.y + 10; },
-            willDrawCell: (data) => {
-              if (data.section === 'body' && usePre) {
-                doc.setFont('Courier');
-              }
-            }
+            styles: { fontSize: 7, cellPadding: 1 },
+            headStyles: { fillColor: [22, 160, 133], textColor: 255, fontSize: 8 },
+            didDrawPage: (data) => { yPos = data.cursor.y + 10; }
           });
-          yPos = doc.lastAutoTable.finalY + 10;
-        } else {
-          yPos -= 8;
         }
-      };
 
-      const allSections = [
-        { title: 'Subject Information', fields: subjectFields, data: data.Subject || data },
-        { title: 'Contract', fields: contractFields, data: data.CONTRACT },
-        { title: 'Neighborhood', fields: neighborhoodFields, data: data.NEIGHBORHOOD },
-        { title: 'Site', fields: siteFields, data: data },
-        { title: 'Improvements', fields: improvementsFields, data: data },
-        { title: 'Sales History', fields: salesHistoryFields, data: data.Subject },
-        { title: 'Prior Sale History', fields: priorSaleHistoryFields, data: data, usePre: true },
-        { title: 'Reconciliation', fields: reconciliationFields, data: data },
-        { title: 'Cost Approach', fields: costApproachFields, data: data },
-        { title: 'Income Approach', fields: incomeApproachFields, data: data },
-        { title: 'PUD Information', fields: pudInformationFields, data: data },
-        { title: 'Market Conditions Addendum', fields: marketConditionsFields, data: data, usePre: true },
-        { title: 'Certification/ signature section', fields: appraiserFields, data: data },
-        { title: 'Supplemental Addendum', fields: supplementalAddendumFields, data: data, usePre: true },
-      ];
-
-      allSections.forEach(section => {
-        addSection(section.title, section.fields, section.data, section.usePre);
-      });
-
-      if (data.Subject || comparableSales.some(s => data[s])) {
-        if (yPos > pageHeight - 60) { doc.addPage(); yPos = margin; }
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(40);
-        doc.text('Sales Comparison Approach', margin, yPos);
-        yPos += 8;
-
-        const activeComps = comparableSales.filter(sale => data[sale]);
-        const head = [['Feature', 'Subject', ...activeComps]];
-        const body = salesGridRows.map(row => {
-          const rowData = [row.label];
-          // Subject
-          let subjectValue = data.Subject?.[row.valueKey] || data.Subject?.[row.subjectValueKey] || '';
-          if (row.adjustmentKey && data.Subject?.[row.adjustmentKey]) {
-            subjectValue += `\n(${data.Subject[row.adjustmentKey]})`;
-          }
-          rowData.push(subjectValue);
-          // Comparables
-          activeComps.forEach(sale => {
-            let compValue = data[sale]?.[row.valueKey] || '';
-            if (row.adjustmentKey && data[sale]?.[row.adjustmentKey]) {
-              compValue += `\n(${data[sale][row.adjustmentKey]})`;
-            }
-            rowData.push(compValue);
-          });
-          return rowData;
-        });
-
-        autoTable(doc, {
-          startY: yPos,
-          head,
-          body,
-          theme: 'grid',
-          styles: { fontSize: 7, cellPadding: 1 },
-          headStyles: { fillColor: [22, 160, 133], textColor: 255, fontSize: 8 },
-          didDrawPage: (data) => { yPos = data.cursor.y + 10; }
-        });
+        addHeaderFooter();
+        doc.save('Appraisal_Report_Summary.pdf');
+        setNotification({ open: true, message: 'PDF generated successfully.', severity: 'success' });
+      } catch (error) {
+        console.error("Failed to generate PDF:", error);
+        setNotification({ open: true, message: 'An error occurred while generating the PDF.', severity: 'error' });
+      } finally {
+        setIsGeneratingPdf(false);
       }
-
-      addHeaderFooter();
-      doc.save('Appraisal_Report_Summary.pdf');
-    } catch (error) {
-      console.error("Failed to generate PDF:", error);
-      setNotification({ open: true, message: 'An error occurred while generating the PDF.', severity: 'error' });
-
-      setIsGeneratingPdf(false);
-    }
+    }, 100); // 100ms delay
   };
+
 
   const getVisibleSections = () => {
     const baseSections = sections.map(s => s.id);
@@ -2785,7 +3132,7 @@ function Subject() {
   };
 
   const renderForm = () => {
-    const props = { data, allData: data, extractionAttempted, handleDataChange, editingField, setEditingField, isEditable, highlightedSubjectFields, highlightedContractFields, highlightedSiteFields, subjectFields, contractFields, neighborhoodFields, siteFields, improvementsFields, salesGridRows, comparableSales, salesComparisonAdditionalInfoFields, salesHistoryFields, priorSaleHistoryFields, reconciliationFields, costApproachFields, incomeApproachFields, pudInformationFields, marketConditionsFields, marketConditionsRows, condoCoopProjectsRows, condoForeclosureFields, appraiserFields, supplementalAddendumFields, uniformResidentialAppraisalReportFields, appraisalAndReportIdentificationFields, projectSiteFields, projectInfoFields, projectAnalysisFields, unitDescriptionsFields, imageAnalysisFields, dataConsistencyFields, comparableRents, RentSchedulesFIELDS2, rentScheduleReconciliationFields, formType: selectedFormType, comparisonData, getComparisonStyle, SalesComparisonSection, EditableField, infoOfSalesFields, loading, stateRequirementFields, handleStateRequirementCheck, stateReqLoading, stateReqResponse, stateReqError, handleUnpaidOkCheck, unpaidOkLoading, unpaidOkResponse, unpaidOkError, handleClientRequirementCheck, clientReqLoading, clientReqResponse, clientReqError, handleFhaCheck,handleADUCheck, fhaLoading, fhaResponse, fhaError, ADULoading, handleEscalationCheck, escalationLoading, escalationResponse, escalationError, onDataChange: handleDataChange, handleExtract, manualValidations, handleManualValidation };
+    const props = { data, allData: data, extractionAttempted, handleDataChange, editingField, setEditingField, isEditable, highlightedSubjectFields, highlightedContractFields, highlightedSiteFields, subjectFields, contractFields, neighborhoodFields, siteFields, improvementsFields, salesGridRows, comparableSales, salesComparisonAdditionalInfoFields, salesHistoryFields, priorSaleHistoryFields, reconciliationFields, costApproachFields, incomeApproachFields, pudInformationFields, marketConditionsFields, marketConditionsRows, condoCoopProjectsRows, condoForeclosureFields, appraiserFields, supplementalAddendumFields, uniformResidentialAppraisalReportFields, appraisalAndReportIdentificationFields, projectSiteFields, projectInfoFields, projectAnalysisFields, unitDescriptionsFields, imageAnalysisFields, dataConsistencyFields, comparableRents, RentSchedulesFIELDS2, rentScheduleReconciliationFields, formType: selectedFormType, comparisonData, getComparisonStyle, SalesComparisonSection, EditableField, infoOfSalesFields, loading, stateRequirementFields, handleStateRequirementCheck, stateReqLoading, stateReqResponse, stateReqError, handleUnpaidOkCheck, unpaidOkLoading, unpaidOkResponse, unpaidOkError, handleClientRequirementCheck, clientReqLoading, clientReqResponse, clientReqError, handleFhaCheck, handleADUCheck, fhaLoading, fhaResponse, fhaError, ADULoading, handleEscalationCheck, escalationLoading, escalationResponse, escalationError, onDataChange: handleDataChange, handleExtract, manualValidations, handleManualValidation };
 
     let formComponent;
     switch (selectedFormType) {
@@ -2816,6 +3163,7 @@ function Subject() {
     <ThemeProvider theme={activeTheme}>
       <CssBaseline />
       <TooltipStyles />
+
 
       <div className="page-container">
         <Sidebar
@@ -2913,6 +3261,11 @@ function Subject() {
                     />
                   </Button>
                 </Tooltip>
+                {/* {htmlFile && (
+                  <Button variant="contained" onClick={handleReviewHtml} sx={{ ml: 1 }}>
+                    Review HTML
+                  </Button>
+                )} */}
 
 
 
@@ -2932,6 +3285,15 @@ function Subject() {
                     />
                   </Button>
                 </Tooltip>
+                {contractFile && (
+                  <Button
+                    variant="contained"
+                    onClick={() => setIsContractCompareOpen(true)}
+                    sx={{ ml: 1 }}
+                  >
+                    Review Contract
+                  </Button>
+                )}
                 {/* {contractFile && <Typography variant="caption" sx={{ ml: 1 }}>{contractFile.name}</Typography>} */}
 
 
@@ -2951,9 +3313,6 @@ function Subject() {
                     />
                   </Button>
                 </Tooltip>
-
-
-
               </Grid>
 
               {/* Form Type Dropdown */}
@@ -2976,7 +3335,6 @@ function Subject() {
                   </Select>
                 </FormControl>
               </Grid>
-
               {/* Fast App Button */}
               {/* <Grid item>
                 <Button
@@ -2988,11 +3346,9 @@ function Subject() {
                   Fast App
                 </Button>
               </Grid> */}
-
               {/* Generate PDF Button */}
               <Grid item>
                 <Button
-
                   variant="outlined"
                   color="primary"
                   onClick={handleGeneratePdf}
@@ -3003,6 +3359,17 @@ function Subject() {
                   ) : (
                     "Generate PDF"
                   )}
+                </Button>
+              </Grid>
+              {/* Generate Error Log Button */}
+              <Grid item>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={handleGenerateErrorLog}
+                  disabled={Object.keys(data).length === 0}
+                >
+                  Generate Error Log
                 </Button>
               </Grid>
             </Grid>
@@ -3056,26 +3423,38 @@ function Subject() {
 
               </Stack>
             )}
-            {contractFile && (
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Typography variant="caption">Contract Copy: {contractFile.name}</Typography>
-                <Button size="small" variant="text" onClick={() => setIsContractCompareOpen(true)}>Review</Button>
-              </Stack>
-            )}
             {htmlFile && (
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Typography variant="caption">HTML File: {htmlFile.name}</Typography>
-                <Button size="small" variant="text" onClick={() => setIsComparisonDialogOpen(true)}>Review</Button>
+                <Button size="small" variant="text" onClick={() => setIsComparisonDialogOpen(true)}>HTML Review</Button>
+
               </Stack>
             )}
+            {contractFile && (
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography variant="caption">Contract Copy: {contractFile.name}</Typography>
+                <Button size="small" variant="text" onClick={() => setIsContractCompareOpen(true)}>Contract Review</Button>
+              </Stack>
+            )}
+
             {engagementLetterFile && (
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Typography variant="caption">Engagement Letter: {engagementLetterFile.name}</Typography>
-                {/* Add onClick handler for engagement letter review if needed */}
-                <Button size="small" variant="text" onClick={() => { /* TODO: Implement engagement letter review */ }}>Review</Button>
+                {engagementLetterFile && (
+                  <Button
+                    variant="text"
+                    onClick={() => setIsEngagementLetterDialogOpen(true)}
+                    sx={{ ml: 1 }}
+                  >
+                    Engagement Letter Review
+                  </Button>
+                )}
+
+
               </Stack>)}
 
           </Paper>
+
           <Paper elevation={2} sx={{ p: 5, top: 0, zIndex: 1100, height: 'fit-content', backgroundColor: activeTheme.palette.background.paper }} >
 
             <Grid item xs={12} md={8}>
@@ -3217,18 +3596,71 @@ function Subject() {
               )}
             </Grid>
           </Paper>
+          <Paper
+            elevation={2}
+            sx={{
+              margin: "0 auto",
+              padding: "2px",
+              fontSize: "0.85rem",
+            }}
+          >
+            {htmlFile && comparisonData?.comparison_results && (
+              <div
+                id="html-data-section"
+                className="card shadow"
+                style={{ fontSize: "0.85rem" }}
+              >
+                <div className="card-header bg-secondary text-white py-1">
+                  <strong style={{ fontSize: "0.9rem" }}>Comparison Result</strong>
+                </div>
+
+                <div className="card-body p-2">
+                  <ComparisonResultTable
+                    result={comparisonData.comparison_results || []}
+                  />
+                </div>
+              </div>
+            )}
+
+            {htmlFile && !comparisonData?.comparison_results && (
+              <div
+                id="html-data-section"
+                className="card shadow mb-3"
+                style={{ fontSize: "0.85rem" }}
+              >
+                <GridInfoCard
+                  id="html-data-section"
+                  title="HTML Data"
+                  fields={Object.keys(comparisonData)}
+                  data={comparisonData}
+                  cardClass="bg-secondary"
+                  onDataChange={(field, value) =>
+                    handleComparisonDataChange(field[0], value)
+                  }
+                  editingField={editingField}
+                  setEditingField={setEditingField}
+                  isEditable={true}
+                  allData={data}
+                  manualValidations={manualValidations}
+                  handleManualValidation={handleManualValidation}
+                />
+              </div>
+            )}
+          </Paper>
+
+
           <ComparisonDialog
             open={isComparisonDialogOpen}
-            onClose={(event, reason) => {
-              if (reason !== 'backdropClick') setIsComparisonDialogOpen(false);
-              handlePdfHtmlCompare();
-            }}
+            onClose={() => setIsComparisonDialogOpen(false)}
             data={{
               comparisonData: comparisonData,
               pdfFile: selectedFile,
               htmlFile: htmlFile,
             }}
             onDataChange={handleComparisonDataChange}
+            pdfFile={selectedFile}
+            setComparisonData={setComparisonData}
+            htmlFile={htmlFile}
           />
           <ContractComparisonDialog
             open={isContractCompareOpen}
@@ -3267,7 +3699,6 @@ function Subject() {
             loading={promptAnalysisLoading}
             response={promptAnalysisResponse}
             error={promptAnalysisError}
-
             submittedPrompt={submittedPrompt}
           />
 
@@ -3332,3 +3763,4 @@ function Subject() {
 }
 
 export default Subject;
+  

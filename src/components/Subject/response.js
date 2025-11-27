@@ -149,7 +149,7 @@ const ResponsePage = () => {
     formData.append('revision_request', revisionText);
 
     try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });

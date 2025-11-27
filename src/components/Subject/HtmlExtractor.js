@@ -86,7 +86,7 @@ const HtmlExtractor = () => {
     formData.append('file', htmlFile);
 
     try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract-from-html/', {
+      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract-from-html/', {
         method: 'POST',
         body: formData,
       });

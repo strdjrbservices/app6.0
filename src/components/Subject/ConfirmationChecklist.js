@@ -108,7 +108,7 @@ const ConfirmationChecklist = () => {
     formData.append('revision_request', CHECKLIST_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/compare-pdfs/', {
+      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/compare-pdfs/', {
         method: 'POST',
         body: formData,
       });
