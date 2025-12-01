@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './Subject.css';
 import { GlobalStyles, keyframes } from '@mui/system';
-import { Info, Warning as WarningIcon, Brightness4 as Brightness4Icon, Brightness7 as Brightness7Icon, Close as CloseIcon, CheckCircleOutline as CheckCircleOutlineIcon, ErrorOutline as ErrorOutlineIcon, KeyboardArrowUp as KeyboardArrowUpIcon } from '@mui/icons-material';
+import { Info, Warning as WarningIcon, Brightness4 as Brightness4Icon, Brightness7 as Brightness7Icon, Close as CloseIcon, CheckCircleOutline as CheckCircleOutlineIcon, ErrorOutline as ErrorOutlineIcon, KeyboardArrowUp as KeyboardArrowUpIcon, NoteAlt as NoteAltIcon } from '@mui/icons-material';
 import { Button, Stack, List, ListItem, ListItemButton, ListItemText, FormControl, InputLabel, Select, MenuItem, IconButton, Tooltip, Paper, Box, Typography, LinearProgress, Alert, Snackbar, Fade, CircularProgress, ThemeProvider, CssBaseline, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Fab } from '@mui/material';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -17,6 +17,7 @@ import EscalationCheck, { ESCALATION_CHECK_PROMPT } from './EscalationCheck';
 import FhaCheck, { FHA_REQUIREMENTS_PROMPT } from './FhaCheck';
 import ADUCheck, { ADU_REQUIREMENTS_PROMPT } from './ADUCheck';
 import { lightTheme, darkTheme } from '../../theme';
+import { TextField } from '@mui/material';
 
 // Import all validation functions
 import * as generalValidation from './generalValidation';
@@ -27,6 +28,7 @@ import * as neighborhoodValidation from './neighborhoodValidation';
 import * as improvementsValidation from './improvementsValidation';
 import * as salesComparisonValidation from './salesComparisonValidation';
 import * as reconciliationValidation from './reconciliationValidation';
+import * as rentScheduleValidation from './rentScheduleValidation';
 import * as appraiserLenderValidation from './appraiserLenderValidation';
 
 import uploadSoundFile from '../../Assets/upload.mp3';
@@ -185,6 +187,46 @@ const ContractComparisonDialog = ({ open, onClose, onCompare, loading, result, e
         <Button onClick={onCompare} variant="contained" disabled={loading || !selectedFile || !contractFile}>
           {loading ? <CircularProgress size={24} /> : (result ? 'Reload' : 'Compare')}
         </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+const NotepadDialog = ({ open, onClose, notes, onNotesChange }) => {
+  const handleSaveNotes = () => {
+    if (!notes) {
+      return; // Don't save an empty file
+    }
+    const blob = new Blob([notes], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Revision.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" aria-labelledby="notepad-dialog-title">
+      <DialogTitle id="notepad-dialog-title">Notepad</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          margin="dense"
+          id="notes"
+          label="Your Notes"
+          type="text"
+          fullWidth
+          multiline
+          rows={10}
+          value={notes}
+          onChange={(e) => onNotesChange(e.target.value)}
+          variant="outlined" />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleSaveNotes} disabled={!notes}>Save to File</Button>
+        <Button onClick={onClose}>Close</Button>
       </DialogActions>
     </Dialog>
   );
@@ -783,7 +825,7 @@ const ComparisonDialog = ({ open, onClose, data, onDataChange, pdfFile, htmlFile
     });
 
     try {
-      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/compare/', { method: 'POST', body: formData });
+      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/compare/', { method: 'POST', body: formData });
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(errorText || 'PDF-HTML comparison failed.');
@@ -1002,6 +1044,22 @@ function Subject() {
   const [engagementLetterCompareResult, setEngagementLetterCompareResult] = useState(null);
   const [engagementLetterCompareError, setEngagementLetterCompareError] = useState('');
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isHtmlReviewLoading, setIsHtmlReviewLoading] = useState(false);
+  const [htmlExtractionTimer, setHtmlExtractionTimer] = useState(0);
+  const htmlExtractionTimerRef = useRef(null);
+  const [isNotepadOpen, setIsNotepadOpen] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [isRentFormTypeMismatchDialogOpen, setIsRentFormTypeMismatchDialogOpen] = useState(false);
+
+  const handleOpenNotepad = () => {
+    if (!notes) { // Only set default text if notes are empty
+      const now = new Date();
+      const dateTimeString = now.toLocaleString();
+      setNotes(`Date and Time: ${dateTimeString}\n\n`);
+    }
+    setIsNotepadOpen(true);
+  };
+
 
 
 
@@ -1153,6 +1211,11 @@ function Subject() {
     return registry;
   };
 
+  const rentScheduleValidationRegistry = {
+    'Proximity to Subject': [rentScheduleValidation.checkRentProximityToSubject],
+    // Add other rent schedule validations here
+  };
+
   const getValidationErrors = () => {
     const errors = [];
     if (!data || Object.keys(data).length === 0) {
@@ -1162,11 +1225,12 @@ function Subject() {
     const validationRegistry = buildValidationRegistry();
     const allData = data;
 
-    const runChecksForField = (sectionName, fieldName, value, path, saleName = null) => {
-      const validationFns = validationRegistry[fieldName] || [];
+    const runChecksForField = (sectionName, fieldName, value, path, saleName = null, customRegistry = validationRegistry) => {
+      const validationFns = customRegistry[fieldName] || [];
       for (const fn of validationFns) {
         try {
           const result = fn(fieldName, value, allData, path, saleName);
+
           if (result && result.isError) {
             errors.push([sectionName, `${fieldName}${saleName ? ` (${saleName})` : ''}`, result.message]);
             break; // Stop on first error for this field
@@ -1205,6 +1269,31 @@ function Subject() {
       }
     });
 
+    // Special handling for Rent Schedule Grid
+    comparableRents.forEach(rentName => {
+      if (allData[rentName]) {
+        Object.keys(allData[rentName]).forEach(fieldKey => {
+          const value = allData[rentName][fieldKey];
+          const path = [rentName, fieldKey];
+          runChecksForField('Rent Schedule', fieldKey, value, path, rentName, rentScheduleValidationRegistry);
+        });
+      }
+    });
+
+    return errors;
+  };
+
+  const getDataConsistencyErrors = (allData) => {
+    const errors = [];
+    if (!allData || Object.keys(allData).length === 0) return errors;
+
+    Object.keys(dataConsistencyFields).forEach(item => {
+      const fields = dataConsistencyFields[item];
+      const values = Object.values(fields).map(fieldKey => allData[fieldKey] || 'N/A');
+      if (new Set(values.filter(v => v !== 'N/A')).size > 1) {
+        errors.push([item, ...values]);
+      }
+    });
     return errors;
   };
 
@@ -1256,42 +1345,31 @@ function Subject() {
       yPos = doc.lastAutoTable.finalY + 10;
     };
 
-    // 1. Missing Fields
+    // 1. Missing & Invalid Fields
     const missingFields = [];
-    if (extractionAttempted) {
-      const allFields = [
-        ...subjectFields.map(f => ({ section: 'Subject', field: f, path: ['Subject', f] })),
-        ...contractFields.map(f => ({ section: 'Contract', field: f, path: ['CONTRACT', f] })),
-        ...neighborhoodFields.map(f => ({ section: 'Neighborhood', field: f, path: ['NEIGHBORHOOD', f] })),
-        ...siteFields.map(f => ({ section: 'Site', field: f, path: ['SITE', f] })),
-        ...improvementsFields.map(f => ({ section: 'Improvements', field: f, path: ['IMPROVEMENTS', f] })),
-        ...reconciliationFields.map(f => ({ section: 'Reconciliation', field: f, path: ['RECONCILIATION', f] })),
-        ...incomeApproachFields.map(f => ({ section: 'Income Approach', field: f, path: ['INCOME_APPROACH', f] })),
-        ...costApproachFields.map(f => ({ section: 'Cost Approach', field: f, path: ['COST_APPROACH', f] })),
-        ...pudInformationFields.map(f => ({ section: 'PUD Information', field: f, path: ['PUD_INFO', f] })),
-        ...appraiserFields.map(f => ({ section: 'Appraiser/Certification', field: f, path: ['CERTIFICATION', f] })),
-        ...marketConditionsFields.map(f => ({ section: 'Market Conditions', field: f, path: ['MARKET_CONDITIONS', f] })),
-        ...salesHistoryFields.map(f => ({ section: 'Sales History', field: f, path: ['SALES_HISTORY', f] })),
-        ...salesComparisonAdditionalInfoFields.map(f => ({ section: 'Sales Comparison Additional Info', field: f, path: ['SALES_TRANSFER', f] })),
-        ...infoOfSalesFields.map(f => ({ section: 'Info of Sales', field: f, path: ['INFO_OF_SALES', f] })),
-        ...projectSiteFields.map(f => ({ section: 'Project Site', field: f, path: ['PROJECT_SITE', f] })),
-        ...projectInfoFields.map(f => ({ section: 'Project Information', field: f, path: ['PROJECT_INFO', f] })),
-        ...projectAnalysisFields.map(f => ({ section: 'Project Analysis', field: f, path: ['PROJECT_ANALYSIS', f] })),
-        ...unitDescriptionsFields.map(f => ({ section: 'Unit Descriptions', field: f, path: ['UNIT_DESCRIPTIONS', f] })),
-        ...priorSaleHistoryFields.map(f => ({ section: 'Prior Sale History', field: f, path: ['PRIOR_SALE_HISTORY', f] })),
-      ];
+    const validationErrors = getValidationErrors();
+    const validationErrorRows = validationErrors.map(([section, field, message]) => {
+      if (message.toLowerCase().includes('blank') || message.toLowerCase().includes('empty')) {
+        missingFields.push([section, field, message]);
+        return null;
+      }
+      return [section, field, message];
+    }).filter(Boolean);
 
-      allFields.forEach(({ section, field, path }) => {
-        let value = data;
-        for (const key of path) {
-          value = value?.[key];
-        }
-        if (value === undefined || value === null || value === '') {
-          missingFields.push([section, field]);
-        }
-      });
+    addSection('Missing Fields', ['Section', 'Field', 'Message'], missingFields);
+    addSection('Field Validation Errors', ['Section', 'Field', 'Error Message'], validationErrorRows);
+
+    // 2. Data Consistency Errors
+    const consistencyErrors = getDataConsistencyErrors(data);
+    if (consistencyErrors.length > 0) {
+      const consistencyBody = consistencyErrors.map(([item, improvements, grid, photo, floorplan]) =>
+        [item, improvements, grid, photo, floorplan]
+      );
+      addSection('Data Consistency Issues',
+        ['Item', 'Improvements', 'Sales Grid', 'Photo', 'Floorplan'],
+        consistencyBody
+      );
     }
-    addSection('Missing Fields', ['Section', 'Field'], missingFields);
 
     // 2. Requirement Check Errors
     const requirementErrors = [];
@@ -1314,11 +1392,7 @@ function Subject() {
     });
     addSection('Requirement Check Issues', ['Check', 'Requirement', 'Status', 'Comment'], requirementErrors);
 
-    // 3. Field Validation Errors
-    const validationErrors = getValidationErrors(data);
-    addSection('Field Validation Errors', ['Section', 'Field', 'Error Message'], validationErrors);
-
-    // 3. Comparable Address Consistency
+    // 4. Comparable Address Consistency
     const addressInconsistencies = [];
     const getFirstThreeWords = (str) => str ? str.split(/\s+/).slice(0, 3).join(' ').toLowerCase() : '';
 
@@ -1374,6 +1448,14 @@ function Subject() {
     const file = e.target.files && e.target.files[0];
     if (file) {
       setHtmlFile(file);
+      setIsHtmlReviewLoading(true);
+      setHtmlExtractionTimer(0);
+      if (htmlExtractionTimerRef.current) {
+        clearInterval(htmlExtractionTimerRef.current);
+      }
+      htmlExtractionTimerRef.current = setInterval(() => {
+        setHtmlExtractionTimer(prev => prev + 1);
+      }, 1000);
       setNotification({ open: true, message: 'HTML file uploaded. Extracting data...', severity: 'info' });
 
       const reader = new FileReader();
@@ -1422,6 +1504,10 @@ function Subject() {
         setComparisonData(extractedData);
         // setIsComparisonDialogOpen(true); // Prevent automatic dialog opening
         setNotification({ open: true, message: 'HTML data extracted. Please review.', severity: 'success' });
+        setIsHtmlReviewLoading(false);
+        if (htmlExtractionTimerRef.current) {
+          clearInterval(htmlExtractionTimerRef.current);
+        }
       };
       reader.readAsText(file);
     }
@@ -1452,7 +1538,7 @@ function Subject() {
     formData.append('contract_copy_file', contractFile);
 
     try {
-      const response = await fetch('https://strdjrbservices2.pythonanywhere.com/api/compare-contract/', {
+      const response = await fetch('https://strdjrbservices1.pythonanywhere.com/api/compare-contract/', {
         method: 'POST',
         body: formData,
       });
@@ -1487,7 +1573,7 @@ function Subject() {
     formData.append('engagement_letter_file', engagementLetterFile);
 
     try {
-      const response = await fetch('https://strdjrbservices2.pythonanywhere.com/api/compare-engagement-letter/', {
+      const response = await fetch('https://strdjrbservices1.pythonanywhere.com/api/compare-engagement-letter/', {
         method: 'POST',
         body: formData,
       });
@@ -1657,6 +1743,17 @@ function Subject() {
         subjectFields.splice(amcIndex, 0, 'AMC License #');
       }
     }
+    if (currentState === 'CA') {
+      const caFields = ["Smoke detector comment", "CO detector comment", "Water heater double-strapped comment"];
+      const stateIndex = subjectFields.indexOf('State') + 1;
+      let offset = 0;
+      caFields.forEach(field => {
+        if (!subjectFields.includes(field)) {
+          subjectFields.splice(stateIndex + offset, 0, field);
+          offset++;
+        }
+      });
+    }
   }
 
 
@@ -1731,6 +1828,17 @@ function Subject() {
     "Are there any adverse site conditions or external factors (easements, encroachments, environmental conditions, land uses, etc.)? If Yes, describe"
   ];
 
+  const zoningComplianceValue = data?.SITE?.['Zoning Compliance'];
+  if (zoningComplianceValue === 'Legal Nonconforming (Grandfathered Use)') {
+    if (!siteFields.includes('Legal Nonconforming (Grandfathered Use) comment')) {
+      siteFields.splice(siteFields.indexOf('Zoning Compliance') + 1, 0, 'Legal Nonconforming (Grandfathered Use) comment');
+    }
+  }
+  if (zoningComplianceValue === 'No Zoning') {
+    if (!siteFields.includes('No Zoning comment')) {
+      siteFields.splice(siteFields.indexOf('Zoning Compliance') + 1, 0, 'No Zoning comment');
+    }
+  }
   const improvementsFields = [
     "Units", "One with Accessory Unit", "# of Stories", "Type", "Existing/Proposed/Under Const.",
     "Design (Style)", "Year Built", "Effective Age (Yrs)", "Foundation Type",
@@ -2013,8 +2121,7 @@ function Subject() {
       'Floorplan': 'TOTAL Bathroom Floorplan Count',
     },
     'GLA': { 'Improvements': 'GLA Improvements Count', 'Grid': 'GLA Sales Comparison Approach Count', 'Photo': 'GLA Photo Count', 'Floorplan': 'GLA Floorplan Count' }
-  };
-  const formTypes = ['1004', '1004C', '1004D', '1025', '1073', '2090', '203k-FHA', '2055', '1075', '2095', '1007', '216'];
+  }; const formTypes = ['1004', '1004C', '1004D', '1025', '1073', '2090', '203k-FHA', '2055', '1075', '2095', '1007', '216', '1025 + 1007', '1073 + 1007'];
 
   const sections = useMemo(() => [
     { id: 'subject-info', title: 'Subject', category: 'SUBJECT' }, // Root level data
@@ -2027,15 +2134,15 @@ function Subject() {
     { id: 'project-analysis-section', title: 'Project Analysis', category: 'PROJECT_ANALYSIS' },
     { id: 'unit-descriptions-section', title: 'Unit Descriptions', category: 'UNIT_DESCRIPTIONS' },
     { id: 'prior-sale-history-section', title: 'Prior Sale History', category: 'PRIOR_SALE_HISTORY' },
-    { id: 'site-section', title: 'Site', category: 'SITE' },
-    { id: 'info-of-sales-section', title: 'Info of Sales', category: 'INFO_OF_SALES' },
+    { id: 'site-section', title: 'Site', category: 'SITE' },    
     { id: 'improvements-section', title: 'Improvements', category: 'IMPROVEMENTS' },
     { id: 'sales-comparison', title: 'Sales Comparison & History', category: ['SALES_GRID'] },
+    { id: 'info-of-sales-section', title: 'Info of Sales', category: 'INFO_OF_SALES' },
     // { id: 'sales-comparison-additional-info', title: 'Sales Comparison Additional Info', category: 'SALES_COMPARISON_ADDITIONAL_INFO' },
     { id: 'sales-history-section', title: 'Sales History', category: 'SALES_TRANSFER' },
     { id: 'rent-schedule-section', title: 'Comparable Rent Schedule', category: 'RENT_SCHEDULE_GRID' },
-    { id: 'reconciliation-section', title: 'Reconciliation', category: 'RECONCILIATION' },
     { id: 'rent-schedule-reconciliation-section', title: 'Rent Schedule Reconciliation', category: 'RENT_SCHEDULE_RECONCILIATION' },
+    { id: 'reconciliation-section', title: 'Reconciliation', category: 'RECONCILIATION' },
     { id: 'cost-approach-section', title: 'Cost Approach', category: 'COST_APPROACH' },
     { id: 'income-approach-section', title: 'Income Approach', category: 'INCOME_APPROACH' },
     { id: 'pud-info-section', title: 'PUD Information', category: 'PUD_INFO' },
@@ -2112,8 +2219,6 @@ function Subject() {
     "Indicated Monthly Market Rent",
   ];
 
-
-
   const comparableSales = [
     "COMPARABLE SALE #1",
     "COMPARABLE SALE #2",
@@ -2125,18 +2230,19 @@ function Subject() {
     "COMPARABLE SALE #8",
     "COMPARABLE SALE #9",
 
+
   ];
 
   const comparableRents = [
-    "COMPARABLE RENT #1",
-    "COMPARABLE RENT #2",
-    "COMPARABLE RENT #3",
-    "COMPARABLE RENT #4",
-    "COMPARABLE RENT #5",
-    "COMPARABLE RENT #6",
-    "COMPARABLE RENT #7",
-    "COMPARABLE SALE #8",
-    "COMPARABLE SALE #9",
+    "COMPARABLE NO. 1",
+    "COMPARABLE NO. 2",
+    "COMPARABLE NO. 3",
+    "COMPARABLE NO. 4",
+    "COMPARABLE NO. 5",
+    "COMPARABLE NO. 6",
+    "COMPARABLE NO. 7",
+    "COMPARABLE NO. 8",
+    "COMPARABLE NO. 9",
   ];
 
   const onFileChange = (e) => {
@@ -2206,6 +2312,7 @@ function Subject() {
   const startExtractionProcess = () => {
     setLoading(true);
     setExtractionAttempted(true);
+    // setIsHtmlReviewLoading(true); // Start HTML review loading along with main extraction
     setExtractionProgress(0);
     setTimer(0);
     timerRef.current = setInterval(() => {
@@ -2232,7 +2339,7 @@ function Subject() {
           setExtractionProgress(prev => (prev < 40 ? prev + 5 : prev));
         }, 500);
 
-        const response = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
+        const response = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
           method: 'POST', body: formData
         });
 
@@ -2271,16 +2378,28 @@ function Subject() {
     }
 
     if (result.fields && result.fields['From Type']) {
-      const extractedFormType = String(result.fields['From Type'] || '').replace(/[^0-9a-zA-Z-]/g, '');
-      if (formTypes.includes(extractedFormType)) {
-        setSelectedFormType(extractedFormType);
+      const rawExtractedType = String(result.fields['From Type'] || '').trim();
+      let finalFormType = '';
+
+      if (rawExtractedType.includes('1004') && rawExtractedType.includes('1007')) {
+        finalFormType = '1007';
+      } else if (rawExtractedType.includes('1025') && rawExtractedType.includes('1007')) {
+        finalFormType = '1025 + 1007';
+      } else if (rawExtractedType.includes('1073') && rawExtractedType.includes('1007')) {
+        finalFormType = '1073 + 1007';
+      } else {
+        finalFormType = rawExtractedType.replace(/[^0-9a-zA-Z-]/g, '');
+      }
+
+      if (formTypes.includes(finalFormType)) {
+        setSelectedFormType(finalFormType);
         setNotification({
           open: true,
-          message: `Form type automatically set to '${extractedFormType}'.`,
+          message: `Form type automatically set to '${finalFormType}'.`,
           severity: 'success'
         });
-      } else if (extractedFormType) {
-        setNotification({ open: true, message: `Extracted form type '${extractedFormType}' is not supported. Please select manually.`, severity: 'warning' });
+      } else if (finalFormType) {
+        setNotification({ open: true, message: `Extracted form type '${finalFormType}' is not supported. Please select manually.`, severity: 'warning' });
       }
     }
 
@@ -2310,7 +2429,9 @@ function Subject() {
     const seconds = totalSeconds % 60;
 
     // Only show success notification if the 'From Type' warning isn't already active.
-    if (notification.severity !== 'warning' || !notification.message.startsWith('From Type is')) {
+    if (result.fields?.INCOME_APPROACH?.['Estimated Monthly Market Rent $'] && selectedFormType !== '1007') {
+      setIsRentFormTypeMismatchDialogOpen(true);
+    } else {
       const sectionName = category ? `${category.replace(/_/g, ' ').toLowerCase()} section` : 'extraction';
       let durationMessage = '';
       if (minutes > 0) {
@@ -2367,6 +2488,7 @@ function Subject() {
     } finally {
       if (timerRef.current) clearInterval(timerRef.current);
       setLoading(false);
+      // setIsHtmlReviewLoading(false); // Stop HTML review loading when main extraction is done
       setLoadingSection(null);
       if (extractionProgress !== 100) setExtractionProgress(0);
     }
@@ -2394,7 +2516,7 @@ function Subject() {
         formData.append('form_type', selectedFormType);
         formData.append('category', category);
 
-        const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', { method: 'POST', body: formData });
+        const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', { method: 'POST', body: formData });
 
         if (!res.ok) {
           throw new Error(`Failed to extract ${category}`);
@@ -2433,7 +2555,7 @@ function Subject() {
     formData.append('comment', prompt);
 
     try {
-      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2520,7 +2642,7 @@ function Subject() {
     formData.append('comment', STATE_REQUIREMENTS_PROMPT);
 
     try {
-      const res = await fetchWithRetry('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
+      const res = await fetchWithRetry('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
 
@@ -2585,7 +2707,7 @@ function Subject() {
     formData.append('comment', UNPAID_OK_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2649,7 +2771,7 @@ function Subject() {
     formData.append('comment', CLIENT_REQUIREMENT_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2714,7 +2836,7 @@ function Subject() {
     formData.append('comment', FHA_REQUIREMENTS_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2778,7 +2900,7 @@ function Subject() {
     formData.append('comment', ADU_REQUIREMENTS_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -2841,7 +2963,7 @@ function Subject() {
     formData.append('comment', ESCALATION_CHECK_PROMPT);
 
     try {
-      const res = await fetch('https://strdjrbservices2.pythonanywhere.com/api/extract/', {
+      const res = await fetch('https://strdjrbservices1.pythonanywhere.com/api/extract/', {
         method: 'POST',
         body: formData,
       });
@@ -3376,58 +3498,68 @@ function Subject() {
           </Paper>
 
           <Paper elevation={2} sx={{ p: 5, position: 'sticky', top: 0, zIndex: 1100, height: 'fit-content', backgroundColor: activeTheme.palette.background.paper }}>
-            {selectedFile && (
+            {selectedFile &&
+              (
+                <Stack direction="row" spacing={3} alignItems="center" flexWrap="wrap">
 
-              <Stack direction="row" spacing={3} alignItems="center" flexWrap="wrap">
+                  {/* FILE NAME */}
+                  <Typography variant="body2" noWrap>
+                    Selected File: <strong>{selectedFile.name}</strong>
+                  </Typography>
 
-                {/* FILE NAME */}
-                <Typography variant="body2" noWrap>
-                  Selected File: <strong>{selectedFile.name}</strong>
-                </Typography>
+                  {/* LOADING AREA */}
+                  {loading && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <CircularProgress size={24} />
+                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        Elapsed: {Math.floor(timer / 60)}m {timer % 60}s
+                      </Typography>
+                      <LinearProgress
+                        variant="determinate"
+                        value={extractionProgress}
+                        sx={{ width: '100px' }}
+                      />
+                    </Box>
+                  )}
 
-                {/* LOADING AREA */}
-                {loading && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <CircularProgress size={24} />
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      Elapsed: {Math.floor(timer / 60)}m {timer % 60}s
+                  {/* TOTAL TIME TIMER */}
+                  <Tooltip title={isTimerRunning ? "Click to pause timer" : "Click to start timer"}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                      onClick={handleTimerToggle}
+                    >
+                      Total Time: {Math.floor(fileUploadTimer / 3600).toString().padStart(2, '0')}:
+                      {Math.floor((fileUploadTimer % 3600) / 60).toString().padStart(2, '0')}:
+                      {(fileUploadTimer % 60).toString().padStart(2, '0')}
                     </Typography>
-                    <LinearProgress
-                      variant="determinate"
-                      value={extractionProgress}
-                      sx={{ width: '100px' }}
-                    />
-                  </Box>
-                )}
+                  </Tooltip>
 
-                {/* TOTAL TIME TIMER */}
-                <Tooltip title={isTimerRunning ? "Click to pause timer" : "Click to start timer"}>
-                  <Typography
-                    variant="body2"
-                    sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', cursor: 'pointer' }}
-                    onClick={handleTimerToggle}
-                  >
-                    Total Time: {Math.floor(fileUploadTimer / 3600).toString().padStart(2, '0')}:
-                    {Math.floor((fileUploadTimer % 3600) / 60).toString().padStart(2, '0')}:
-                    {(fileUploadTimer % 60).toString().padStart(2, '0')}
-                  </Typography>
-                </Tooltip>
+                  {/* LAST EXTRACTION */}
+                  {!loading && lastExtractionTime && (
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      Last extraction: {lastExtractionTime >= 60 ? `${Math.floor(lastExtractionTime / 60)}m ` : ''}
+                      {`${(lastExtractionTime % 60).toFixed(1)}s`}
+                    </Typography>
+                  )}
 
-                {/* LAST EXTRACTION */}
-                {!loading && lastExtractionTime && (
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                    Last extraction: {lastExtractionTime >= 60 ? `${Math.floor(lastExtractionTime / 60)}m ` : ''}
-                    {`${(lastExtractionTime % 60).toFixed(1)}s`}
-                  </Typography>
-                )}
-
-              </Stack>
-            )}
+                </Stack>
+              )
+            }
             {htmlFile && (
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Typography variant="caption">HTML File: {htmlFile.name}</Typography>
-                <Button size="small" variant="text" onClick={() => setIsComparisonDialogOpen(true)}>HTML Review</Button>
-
+                <Button size="small" variant="text" onClick={() => setIsComparisonDialogOpen(true)} disabled={isHtmlReviewLoading || loading}>
+                  {isHtmlReviewLoading ? (
+                    <>
+                      <CircularProgress size={16} sx={{ mr: 1 }} />
+                      <Typography variant="caption" sx={{ mr: 1 }}>{Math.floor(htmlExtractionTimer / 60)}m {htmlExtractionTimer % 60}s</Typography>
+                    </>
+                  ) : loading && isHtmlReviewLoading ? (
+                    <CircularProgress size={16} sx={{ mr: 1 }} />
+                  ) : null}
+                  HTML Review
+                </Button>
               </Stack>
             )}
             {contractFile && (
@@ -3757,10 +3889,39 @@ function Subject() {
           <KeyboardArrowUpIcon />
         </Fab>
       )}
+      <NotepadDialog
+        open={isNotepadOpen}
+        onClose={() => setIsNotepadOpen(false)}
+        notes={notes}
+        onNotesChange={setNotes}
+      />
+      <Tooltip title="Open Notepad" placement="top">
+        <Fab color="secondary" size="small" onClick={handleOpenNotepad} sx={{ position: 'fixed', bottom: 16, right: 80, zIndex: 1200 }}>
+          <NoteAltIcon />
+        </Fab>
+      </Tooltip>
+      <Dialog open={isRentFormTypeMismatchDialogOpen} onClose={() => setIsRentFormTypeMismatchDialogOpen(false)}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
+          <WarningIcon color="warning" sx={{ mr: 1 }} />
+          Form Type Mismatch
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            "Estimated Monthly Market Rent $" is present, but the Form Type is not 1007.
+          </Typography>
+          <Typography sx={{ mt: 1 }}>
+            Please verify the selected form type.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsRentFormTypeMismatchDialogOpen(false)} variant="contained">Close</Button>
+        </DialogActions>
+      </Dialog>
+      
+
     </ThemeProvider >
 
   );
 }
 
 export default Subject;
-  

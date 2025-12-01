@@ -7,7 +7,8 @@ import HomePage from './components/Subject/HomePage.js';
 import Compare from './components/Subject/Compare.js';
 import './App.css';
 import HtmlExtractor from './components/Subject/HtmlExtractor';
-import Form1004D  from './components/Subject/1004D';
+import Form1004D from './components/Subject/1004D';
+import Box from '@mui/material/Box';
 
 function App() {
   const location = useLocation();
@@ -24,7 +25,7 @@ function App() {
 
               target="_blank" rel="noopener noreferrer"
             >
-              FULL FILE REVIEW 
+              FULL FILE REVIEW
             </Link>
             <Link
               to="/Compare"
@@ -69,7 +70,28 @@ function App() {
         <Route path="/compare" element={<Compare />} />
         <Route path="/html-extractor" element={<HtmlExtractor />} />
         <Route path="/1004D" element={<Form1004D />} />
+
       </Routes>
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 6,
+          right: 12,
+          zIndex: 9999,
+          background: 'rgba(255, 255, 255, 0.25)',
+          backdropFilter: 'blur(6px)',
+          borderRadius: '12px',
+          padding: '6px 14px',
+          fontSize: '0.75rem',
+          color: '#444',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+          pointerEvents: 'none',
+          border: '1px solid rgba(255,255,255,0.4)',
+        }}
+      >
+        Developed by <strong></strong>
+      </Box>
+
     </>
   );
 }

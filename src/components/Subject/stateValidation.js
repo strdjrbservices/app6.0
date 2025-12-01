@@ -1,10 +1,10 @@
 const checkAppraiserFee = (data) => {
-    const fee = data?.CERTIFICATION?.['Appraisal Fee'] || data?.RECONCILIATION?.['Appraisal Fee'];
+    const fee = data?.CERTIFICATION?.['Appraisal Fee'] || data?.RECONCILIATION?.['Appraisal Fee'] || data?.["Appraiser's Fee"];
     return fee && String(fee).replace(/[^0-9.]/g, '') > 0;
 };
 
 const checkAmcLicense = (data) => {
-    return data?.CERTIFICATION?.['AMC License #'];
+    return data?.CERTIFICATION?.['AMC License #'] || data?.['AMC License #'];
 };
 
 const checkAmcFee = (data) => {
@@ -24,11 +24,13 @@ const checkIllinoisRequirements = (data) => {
 };
 
 const checkCaliforniaRequirements = (data) => {
-    const improvements = data?.IMPROVEMENTS?.['Additional features']?.toLowerCase() || '';
     const missing = [];
-    if (!improvements.includes('smoke detector')) missing.push("Smoke detector comment");
-    if (!improvements.includes('carbon monoxide')) missing.push("CO detector comment");
-    if (!improvements.includes('double strapped') && !improvements.includes('earthquake straps')) missing.push("Water heater double-strapped comment");
+
+    // Check for fields directly in the data object, as they are part of the Subject section for CA.
+    if (!data?.['Smoke detector comment']) missing.push("Smoke detector comment");
+    if (!data?.['CO detector comment']) missing.push("CO detector comment");
+    if (!data?.['Water heater double-strapped comment']) missing.push("Water heater double-strapped comment");
+
     return missing;
 };
 

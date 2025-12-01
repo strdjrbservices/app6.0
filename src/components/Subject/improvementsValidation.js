@@ -141,18 +141,15 @@ export const checkConstructionStatusAndReconciliation = (field, data) => {
     const status = String(data['Existing/Proposed/Under Const.'] || '').trim().toLowerCase();
     const reconciliationField = "This appraisal is made \"as is\", subject to completion per plans and specifications on the basis of a hypothetical condition that the improvements have been completed, subject to the following repairs or alterations on the basis of a hypothetical condition that the repairs or alterations have been completed, or subject to the following required inspection based on the extraordinary assumption that the condition or deficiency does not require alteration or repair:";
     const reconciliationValue = String(data[reconciliationField] || '').toLowerCase();
-
     const validStatuses = ['existing', 'proposed', 'under const.'];
     const isStatusValid = validStatuses.some(validStatus => status.includes(validStatus));
 
     if (!status || !isStatusValid) {
         return { isError: true, message: "Construction status must include 'Existing', 'Proposed', or 'Under Const.'." };
     }
-
     if (status.includes('existing') && !reconciliationValue.includes('as is')) {
         return { isError: true, message: "If construction status is 'Existing', reconciliation should be 'as is'." };
     }
-
     if ((status.includes('proposed') || status.includes('under const.')) && !reconciliationValue.includes('subject to')) {
         return { isError: true, message: "If status is 'Proposed' or 'Under Const.', reconciliation should be 'subject to'." };
     }

@@ -9,15 +9,18 @@ export const checkZoning = (field, text, data) => {
 
     if (value === 'Legal') {
         return { isMatch: true, message: "Zoning is Legal." };
-    } else if (value === 'Legal Nonconforming (Grandfathered Use)' || value === 'No Zoning') {
-        const supplementalAddendum = String(data['SUPPLEMENTAL ADDENDUM'] || '').trim();
-        if (!supplementalAddendum) {
-            return { isError: true, message: `Comments are required in 'Supplemental Addendum' when compliance is '${value}'.` };
+    } else if (value === 'Legal Nonconforming (Grandfathered Use)') {
+        if (!data?.SITE?.['Legal Nonconforming (Grandfathered Use) comment']) {
+            return { isError: true, message: "A comment is required for 'Legal Nonconforming (Grandfathered Use)'." };
+        }
+    } else if (value === 'No Zoning') {
+        if (!data?.SITE?.['No Zoning comment']) {
+            return { isError: true, message: "A comment is required for 'No Zoning'." };
         }
     } else if (value && !validValues.some(v => value.startsWith(v))) {
         return { isError: true, message: `Invalid Zoning Compliance value: '${value}'.` };
     }
-    return null;
+    return { isMatch: true };
 };
 
 export const checkZoningDescription = (field, text) => {
