@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Paper, Button, Typography, Stack, Box } from '@mui/material';
 
 const HomePage = () => {
+  const [username, setUsername] = useState('');
+
+  useEffect(() => {
+    setUsername(localStorage.getItem('username') || '');
+  }, []);
   return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
       <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
         <Typography variant="h4" gutterBottom>
-          Welcome to Appraisal Tools
+          Welcome to Appraisal Tools{username ? `, ${username}` : ''}
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
           Please select a tool to get started.
