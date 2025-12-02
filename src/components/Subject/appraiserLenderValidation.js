@@ -48,3 +48,49 @@ export const checkLenderNameInconsistency = (field, text, data) => {
     }
     return { isMatch: true };
 };
+
+export const checkLicenseNumberConsistency = (field, text, data) => {
+    if (field !== 'LICENSE/REGISTRATION/CERTIFICATION #') return null;
+
+    const licenseNumber = String(text || '').trim();
+    if (!licenseNumber) return null; // Don't validate if blank, other validations handle that.
+
+    const certificationData = data?.CERTIFICATION;
+    if (!certificationData) return null;
+
+    const stateCert = String(certificationData['State Certification #'] || '').trim();
+    const stateLicense = String(certificationData['or State License #'] || '').trim();
+    const otherLicense = String(certificationData['or Other (describe)'] || '').trim();
+    const stateNumber = String(certificationData['State #'] || '').trim();
+
+    const possibleMatches = [stateCert, stateLicense, otherLicense, stateNumber].filter(Boolean);
+
+    if (possibleMatches.length > 0 && !possibleMatches.includes(licenseNumber)) {
+        return { isError: true, message: `License number mismatch. Expected to match one of: State Certification #, State License #, Other, or State #.` };
+    }
+
+    return { isMatch: true };
+};
+
+export const checkDateGreaterThanToday = (field, text) => {
+    const fieldsToCheck = ['Policy Period To', 'License Vaild To'];
+    if (!fieldsToCheck.includes(field)) return null;
+
+    if (!text || String(text).trim() === '') {
+        return null; // Don't validate if blank, other validations can handle that.
+    }
+
+    const inputDate = new Date(text);
+    if (isNaN(inputDate.getTime())) {
+        return { isError: true, message: `Invalid date format for '${field}'.` };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set time to midnight to compare dates only
+
+    if (inputDate <= today) {
+        return { isError: true, message: `'${field}' must be a future date.` };
+    }
+
+    return { isMatch: true };
+};

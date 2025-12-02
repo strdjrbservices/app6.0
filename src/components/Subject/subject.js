@@ -42,6 +42,31 @@ const bounce = keyframes`
   60% { transform: translateY(-4px); }
 `;
 
+const HighlightKeywords = ({ text, keywordGroups }) => {
+  if (!text || !keywordGroups || keywordGroups.length === 0) {
+    return text;
+  }
+
+  const allKeywords = keywordGroups.flatMap(group => group.keywords);
+  if (allKeywords.length === 0) {
+    return text;
+  }
+
+  const escapedKeywords = allKeywords.map(kw => kw.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&'));
+  const regex = new RegExp(`(${escapedKeywords.join('|')})`, 'gi');
+  const parts = String(text).split(regex);
+
+  return (
+    <span>
+      {parts.map((part, i) => {
+        const matchedGroup = keywordGroups.find(group =>
+          group.keywords.some(keyword => part.toLowerCase() === keyword.toLowerCase())
+        );
+        return matchedGroup ? <span key={i} style={matchedGroup.style}>{part}</span> : part;
+      })}
+    </span>
+  );
+};
 
 const TooltipStyles = () => (
   <GlobalStyles styles={{
@@ -633,6 +658,25 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
   //     onPromptSubmit(prompt);
   //   }
   // };
+  const keywordGroups = [
+    {
+      keywords: ["consistently", "Fulfilled", "PRESENT", "CONSISTENT"],
+      style: { backgroundColor: '#91ff00ff', color: '#000000', padding: '1px 3px', borderRadius: '3px' }
+    },
+    {
+      keywords: [
+        "However", "Not consistently", "Not Fulfilled", "Not PRESENT",
+        "Not CONSISTENT", "ilconsistently", "absent", "ilCONSISTENT","Specifically", "mismatch", "mismatched", "missing", "inconsistent",
+      ],
+      style: { backgroundColor: '#ff0000', color: '#ffffff', padding: '1px 3px', borderRadius: '3px' }
+    }
+  ];
+
+  // This is kept for other components that might still use the old prop.
+  // For PromptAnalysis, we will use keywordGroups.
+  // const highlightKeywords = keywordGroups.find(g => g.style.backgroundColor === '#91ff00ff')?.keywords || [];
+
+
   const prompt1 =
     "Verify that the Subject Property Address is identical across all locations in the report including: Subject Section, Sales Comparison Grid, Location Map, Aerial Map, Header/Footer, and any Addenda.\nAlso confirm the presence of the Subject Street View, Front View, and Rear View photos with no duplicates or mislabeled subject photos.";
 
@@ -680,7 +724,7 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
                   Summary
                 </Typography>
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                  {summary}
+                  <HighlightKeywords text={summary} keywordGroups={keywordGroups} />
                 </Typography>
               </Paper>
             )}
@@ -701,9 +745,9 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
                     <TableBody>
                       {comparison_summary.map((item, index) => (
                         <TableRow key={index}>
-                          <TableCell>{item.status}</TableCell>
-                          <TableCell>{item.section}</TableCell>
-                          <TableCell>{item.comment}</TableCell>
+                          <TableCell><HighlightKeywords text={item.status} keywordGroups={keywordGroups} /></TableCell>
+                          <TableCell><HighlightKeywords text={item.section} keywordGroups={keywordGroups} /></TableCell>
+                          <TableCell><HighlightKeywords text={item.comment} keywordGroups={keywordGroups} /></TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -731,9 +775,11 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
                             {key}
                           </TableCell>
                           <TableCell>
-                            {(typeof value === 'object' && value !== null && 'value' in value)
-                              ? String(value.value)
-                              : (typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value))}
+                            <HighlightKeywords text={(typeof value === 'object' && value !== null && 'value' in value)
+                                ? String(value.value)
+                                : (typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value))}
+                              keywordGroups={keywordGroups}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -754,7 +800,7 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
           Analysis Result
         </Typography>
         <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'inherit', fontFamily: 'monospace' }}>
-          {String(data)}
+          <HighlightKeywords text={String(data)} keywordGroups={keywordGroups} />
         </pre>
       </Paper>
     );
@@ -1938,7 +1984,9 @@ function Subject() {
     "LENDER/CLIENT Name",
     "Lender/Client Company Name",
     "Lender/Client Company Address",
-    "Lender/Client Email Address"
+    "Lender/Client Email Address","E&O Insurance",
+    "Policy Period From",
+    "Policy Period To","License Vaild To","LICENSE/REGISTRATION/CERTIFICATION #"
   ];
 
   const supplementalAddendumFields = [
@@ -3240,7 +3288,7 @@ function Subject() {
         visibleSectionIds = baseSections.filter(id => !['rent-schedule-section', 'prior-sale-history-section', 'rent-schedule-reconciliation-section', 'project-site-section', 'project-info-section', 'project-analysis-section', 'unit-descriptions-section'].includes(id));
         break;
       case '1073':
-        visibleSectionIds = baseSections.filter(id => !['rent-schedule-section', 'improvements-section', 'site-section', 'rent-schedule-reconciliation-section', 'pud-info-section', 'market-conditions-section'].includes(id));
+        visibleSectionIds = baseSections.filter(id => !['rent-schedule-section', 'improvements-section', 'site-section', 'rent-schedule-reconciliation-section', 'pud-info-section'].includes(id));
         break;
       case '1007':
         visibleSectionIds = baseSections.filter(id => !['project-site-section', 'prior-sale-history-section', 'project-info-section', 'project-analysis-section', 'unit-descriptions-section', 'pud-info-section', 'market-conditions-section'].includes(id));

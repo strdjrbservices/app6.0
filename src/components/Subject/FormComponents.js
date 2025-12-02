@@ -7,7 +7,7 @@ import { checkHousingPriceAndAge, checkNeighborhoodUsageConsistency, checkSingle
 import { checkUnits, checkAccessoryUnit, checkNumberOfStories, checkPropertyType, checkConstructionStatusAndReconciliation, checkDesignStyle, checkYearBuilt, checkEffectiveAge, checkAdditionalFeatures, checkPropertyConditionDescription, checkPhysicalDeficienciesImprovements, checkNeighborhoodConformity, checkFoundationType, checkBasementDetails, checkEvidenceOf, checkMaterialCondition, checkHeatingFuel, checkCarStorage, checkImprovementsFieldsNotBlank } from './improvementsValidation';
 import { checkConditionAdjustment, checkBedroomsAdjustment, checkBathsAdjustment, checkQualityOfConstructionAdjustment, checkProximityToSubject, checkSiteAdjustment, checkGrossLivingAreaAdjustment, checkSubjectAddressInconsistency, checkDesignStyleAdjustment, checkFunctionalUtilityAdjustment, checkEnergyEfficientItemsAdjustment, checkPorchPatioDeckAdjustment, checkHeatingCoolingAdjustment, checkDataSourceDOM, checkActualAgeAdjustment, checkLeaseholdFeeSimpleConsistency, checkDateOfSale, checkLocationConsistency, checkSalePrice } from './salesComparisonValidation';
 import { checkFinalValueConsistency, checkCostApproachDeveloped, checkAppraisalCondition, checkAsOfDate, checkFinalValueBracketing, checkReconciliationFieldsNotBlank } from './reconciliationValidation';
-import { checkLenderAddressInconsistency, checkLenderNameInconsistency, checkAppraiserFieldsNotBlank } from './appraiserLenderValidation';
+import { checkLenderAddressInconsistency, checkLenderNameInconsistency, checkAppraiserFieldsNotBlank, checkLicenseNumberConsistency as checkAppraiserLicenseConsistency, checkDateGreaterThanToday } from './appraiserLenderValidation';
 import { checkCostNew, checkSourceOfCostData, checkIndicatedValueByCostApproach, checkCostApproachFieldsNotBlank } from './costApproachValidation';
 import { checkResearchHistory, checkSubjectPriorSales, checkComparablePriorSales, checkDataSourceNotBlank, checkEffectiveDateIsCurrentYear, checkSubjectPriorSaleDate, checkCompPriorSaleDate } from './salesHistoryValidation';
 import { checkStateRequirements } from './stateValidation';
@@ -228,6 +228,9 @@ export const EditableField = ({ fieldPath, value, onDataChange, editingField, se
 
   validationRegistry['Lender/Client Company Address'].push(checkLenderAddressInconsistency);
   validationRegistry['LENDER/CLIENT Name'].push(checkLenderNameInconsistency);
+  validationRegistry['LICENSE/REGISTRATION/CERTIFICATION #'] = [checkAppraiserLicenseConsistency]; // Corrected this line
+  validationRegistry['Policy Period To'] = [checkDateGreaterThanToday];
+  validationRegistry['License Vaild To'] = [checkDateGreaterThanToday];
 
   // Cost Approach Validations
   validationRegistry["ESTIMATED/REPRODUCTION / REPLACEMENT COST NEW"] = [checkCostNew];
