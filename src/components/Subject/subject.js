@@ -2103,7 +2103,7 @@ function Subject() {
     "Project Primary Occupancy", "Is the developer/builder in control of the Homeowners' Association (HOA)?",
     "Management Group", "Does any single entity (the same individual, investor group, corporation, etc.) own more than 10% of the total units in the project?"
     , "Was the project created by the conversion of existing building(s) into a condominium?",
-    "If Yes,describe the original use and date of conversion",
+    "Was the project created by the conversion of existing building(s) into a condominium? If Yes,describe the original use and date of conversion",
     "Are the units, common elements, and recreation facilities complete (including any planned rehabilitation for a condominium conversion)?", "If No, describe",
     "Is there any commercial space in the project?",
     "If Yes, describe and indicate the overall percentage of the commercial space.", "Describe the condition of the project and quality of construction.",

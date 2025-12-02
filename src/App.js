@@ -87,10 +87,19 @@ function App() {
           boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
           pointerEvents: 'none',
           border: '1px solid rgba(255,255,255,0.4)',
+          animation: 'fadeInOut 4s ease-in-out infinite',
+
+          '@keyframes fadeInOut': {
+            '0%': { opacity: 0, transform: 'translateY(10px)' },
+            '20%': { opacity: 1, transform: 'translateY(0)' },
+            '80%': { opacity: 1, transform: 'translateY(0)' },
+            '100%': { opacity: 0, transform: 'translateY(10px)' }
+          }
         }}
       >
         Developed by <strong></strong>
       </Box>
+
 
     </>
   );
