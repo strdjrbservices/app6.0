@@ -18,13 +18,22 @@ export const checkTaxYear = (field, text) => {
 export const checkRETaxes = (field, text) => {
     if (field !== 'R.E. Taxes $') return null;
     const taxesValue = String(text || '').trim();
+    const integerPart = taxesValue.split('.')[0].replace(/[^0-9]/g, '');
     if (!taxesValue) {
         return { isError: true, message: 'R.E. Taxes $ should not be blank.' };
     }
-    const integerPart = taxesValue.split('.')[0].replace(/[^0-9]/g, '');
+    
     if (integerPart.length > 4) {
         return { isError: true, message: 'R.E. Taxes $ integer part should not exceed 4 digits.' };
     }
+    // Check if the value contains any alphabetic characters.
+    if (/[a-zA-Z]/.test(taxesValue)) {
+        return { isError: true, message: 'R.E. Taxes $ must only contain numbers and currency symbols.' };
+    }
+    // const integerPart = taxesValue.split('.')[0].replace(/[^0-9]/g, '');
+    // if (integerPart.length > 4) {
+    //     return { isError: true, message: 'R.E. Taxes $ integer part should not exceed 4 digits.' };
+    // }
     return { isMatch: true };
 };
 
@@ -76,7 +85,7 @@ export const checkOfferedForSale = (field, text, data) => {
             const detailsValue = String(detailsField || '').toLowerCase();
             const keywords = ['dom', 'listed', 'listing', 'mls', 'multiple listing service'];
             const hasKeyword = keywords.some(keyword => detailsValue.includes(keyword));
-            
+
             if (!hasKeyword) {
                 return { isError: true, message: `If 'Yes', details must include one of: ${keywords.join(', ')}.` };
             }
@@ -111,5 +120,17 @@ export const checkAnsi = (field, text, data) => {
         return { isError: true, message: "ANSI comment is mandatory for conventional loans." };
     }
 
+    return { isMatch: true };
+};
+
+export const checkCensusTract = (field, text) => {
+    if (field !== 'Census Tract') return null;
+    const value = String(text || '').trim();
+    if (!value) return null; // Not blank validation, just numeric
+
+    if (!/^\d+(\.\d+)?$/.test(value)) {
+        return { isError: true, message: 'Census Tract must only contain numbers.' };
+    }
+    
     return { isMatch: true };
 };

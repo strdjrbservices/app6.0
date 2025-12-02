@@ -645,8 +645,8 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
   const prompt5 =
     "Verify that every photo is properly labeled (Subject, Comp 1, Comp 2, etc.) and confirm that there are no duplicate photos, reused photos, or mislabeled views across the entire photo section.";
 
-  const prompt6 =
-    "Please confirm whether the following revision request is addressed in the file:&#10;&#10;• The lease begin date for Rental Comp #3 is incorrectly shown as 'Owner'. Confirm if corrected.&#10;&#10;If addressed in comments, confirm that the corresponding section was updated in the main form.&#10;&#10;For each revision item, answer only: 'Revised – Corrected', 'Revised – Not Corrected', or 'Not Addressed'. Keep responses short.&#10;&#10;Additional Verification (do NOT treat as revisions):&#10;&#10;• Identify any blank fields or unchecked/incorrect checkboxes throughout the form.&#10;• If assignment type is Refinance → Contract Section must be blank (including checkboxes).&#10;• If Purchase → Contract Section fields and checkboxes must be accurately completed.&#10;• Validate Garage/Carport count and type based on the checkboxes marked.&#10;• Verify Appraised Value matches in all required locations: Page 2 (Sales Grid Conclusion), Summary Section, Addendum (if repeated), and Signature Page.&#10;• Signature Date must be after the Effective/As-of Date.&#10;• Signature Page must include 'Fastapp' in the Company/AMC name.&#10;• Check prior services disclosure, exposure time comment, and confirm no appraiser invoice is included. If present, mark as must-remove.&#10;&#10;Now verify presence of the following sections. Answer only 'Present' or 'Not Present': This Report is One of the Following Types:, Comments on Standards Rule 2-3, Reasonable Exposure Time, Comments on Appraisal and Report Identification.";
+  // const prompt6 =
+  //   "Please confirm whether the following revision request is addressed in the file:&#10;&#10;• The lease begin date for Rental Comp #3 is incorrectly shown as 'Owner'. Confirm if corrected.&#10;&#10;If addressed in comments, confirm that the corresponding section was updated in the main form.&#10;&#10;For each revision item, answer only: 'Revised – Corrected', 'Revised – Not Corrected', or 'Not Addressed'. Keep responses short.&#10;&#10;Additional Verification (do NOT treat as revisions):&#10;&#10;• Identify any blank fields or unchecked/incorrect checkboxes throughout the form.&#10;• If assignment type is Refinance → Contract Section must be blank (including checkboxes).&#10;• If Purchase → Contract Section fields and checkboxes must be accurately completed.&#10;• Validate Garage/Carport count and type based on the checkboxes marked.&#10;• Verify Appraised Value matches in all required locations: Page 2 (Sales Grid Conclusion), Summary Section, Addendum (if repeated), and Signature Page.&#10;• Signature Date must be after the Effective/As-of Date.&#10;• Signature Page must include 'Fastapp' in the Company/AMC name.&#10;• Check prior services disclosure, exposure time comment, and confirm no appraiser invoice is included. If present, mark as must-remove.&#10;&#10;Now verify presence of the following sections. Answer only 'Present' or 'Not Present': This Report is One of the Following Types:, Comments on Standards Rule 2-3, Reasonable Exposure Time, Comments on Appraisal and Report Identification.";
 
   const supplementalAddendumPrompt =
     "1. Confirm presence of the following sections and answer only 'Present' or 'Not Present': SUPPLEMENTAL ADDENDUM, ADDITIONAL COMMENTS, APPRAISER'S CERTIFICATION, SUPERVISORY APPRAISER'S CERTIFICATION, Analysis/Comments, GENERAL INFORMATION ON ANY REQUIRED REPAIRS, UNIFORM APPRAISAL DATASET (UAD) DEFINITIONS ADDENDUM.&#10;&#10;2. Confirm presence of the following sections and answer only 'Present' or 'Not Present': SCOPE OF WORK, INTENDED USE, INTENDED USER, DEFINITION OF MARKET VALUE, STATEMENT OF ASSUMPTIONS AND LIMITING CONDITIONS.";
@@ -773,7 +773,7 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
             <Button variant="outlined" size="small" onClick={() => onPromptSubmit(prompt2)} disabled={loading}>Compare Room Counts</Button>
             <Button variant="outlined" size="small" onClick={() => onPromptSubmit(prompt4)} disabled={loading}>Match Comp Addresses</Button>
             <Button variant="outlined" size="small" onClick={() => onPromptSubmit(prompt5)} disabled={loading}>Verify Photo Labels & Duplicates</Button>
-            <Button variant="outlined" size="small" onClick={() => onPromptSubmit(prompt6)} disabled={loading}>Revision Requests Check</Button>
+            {/* <Button variant="outlined" size="small" onClick={() => onPromptSubmit(prompt6)} disabled={loading}>Revision Requests Check</Button> */}
             <Button variant="outlined" size="small" onClick={() => onPromptSubmit(supplementalAddendumPrompt)} disabled={loading}>Page Present Check</Button>
           </Stack>
           {loading && <CircularProgress size={24} />}
@@ -1121,7 +1121,7 @@ function Subject() {
       "Assessor's Parcel #": [generalValidation.checkSubjectFieldsNotBlank],
       'Neighborhood Name': [generalValidation.checkSubjectFieldsNotBlank],
       'Map Reference': [generalValidation.checkSubjectFieldsNotBlank],
-      'Census Tract': [generalValidation.checkSubjectFieldsNotBlank],
+      'Census Tract': [generalValidation.checkSubjectFieldsNotBlank, subjectValidation.checkCensusTract],
       'Occupant': [generalValidation.checkSubjectFieldsNotBlank],
       'Property Rights Appraised': [generalValidation.checkSubjectFieldsNotBlank],
       'Lender/Client': [generalValidation.checkSubjectFieldsNotBlank, appraiserLenderValidation.checkLenderNameInconsistency],
@@ -1823,7 +1823,7 @@ function Subject() {
     "FEMA Special Flood Hazard Area",
     "FEMA Flood Zone",
     "FEMA Map #",
-    "FEMA Map Date",
+    "FEMA Map Date", "Are the utilities and off-site improvements typical for the market area?",
     "Are the utilities and off-site improvements typical for the market area? If No, describe",
     "Are there any adverse site conditions or external factors (easements, encroachments, environmental conditions, land uses, etc.)? If Yes, describe"
   ];
@@ -2039,7 +2039,8 @@ function Subject() {
     "Topography", "Size", "Density", "View", "Specific Zoning Classification", "Zoning Description",
     "Zoning Compliance", "Is the highest and best use of subject property as improved (or as proposed per plans and specifications) the present use?",
     "Electricity", "Gas", "Water", "Sanitary Sewer", "Street", "Alley", "FEMA Special Flood Hazard Area",
-    "FEMA Flood Zone", "FEMA Map #", "FEMA Map Date", "Are the utilities and off-site improvements typical for the market area? If No, describe",
+    "FEMA Flood Zone", "FEMA Map #", "FEMA Map Date", "Are the utilities and off-site improvements typical for the market area?", "Are the utilities and off-site improvements typical for the market area? If No, describe",
+    "Are there any adverse site conditions or external factors (easements, encroachments, environmental conditions, land uses, etc.)?",
     "Are there any adverse site conditions or external factors (easements, encroachments, environmental conditions, land uses, etc.)? If Yes, describe",
   ];
 
@@ -2134,7 +2135,7 @@ function Subject() {
     { id: 'project-analysis-section', title: 'Project Analysis', category: 'PROJECT_ANALYSIS' },
     { id: 'unit-descriptions-section', title: 'Unit Descriptions', category: 'UNIT_DESCRIPTIONS' },
     { id: 'prior-sale-history-section', title: 'Prior Sale History', category: 'PRIOR_SALE_HISTORY' },
-    { id: 'site-section', title: 'Site', category: 'SITE' },    
+    { id: 'site-section', title: 'Site', category: 'SITE' },
     { id: 'improvements-section', title: 'Improvements', category: 'IMPROVEMENTS' },
     { id: 'sales-comparison', title: 'Sales Comparison & History', category: ['SALES_GRID'] },
     { id: 'info-of-sales-section', title: 'Info of Sales', category: 'INFO_OF_SALES' },
@@ -3917,7 +3918,7 @@ function Subject() {
           <Button onClick={() => setIsRentFormTypeMismatchDialogOpen(false)} variant="contained">Close</Button>
         </DialogActions>
       </Dialog>
-      
+
 
     </ThemeProvider >
 
