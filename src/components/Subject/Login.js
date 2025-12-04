@@ -59,7 +59,6 @@ const Login = ({ onLogin }) => {
             setLoading(false);
         }
     };
-
     return (
         <Box
             sx={{
@@ -67,7 +66,7 @@ const Login = ({ onLogin }) => {
                 justifyContent: 'center',
                 alignItems: 'center',
                 minHeight: '100vh',
-                background: 'linear-gradient(-45deg, #667eea, #764ba2, #23a6d5, #23d5ab)',
+                background: 'linear-gradient(-45deg, #000000ff, #a960f3ff, #23a6d5, #f03800ff)',
                 backgroundSize: '400% 400%',
                 animation: 'gradient 15s ease infinite',
                 '@keyframes gradient': {
@@ -80,7 +79,7 @@ const Login = ({ onLogin }) => {
             <Paper elevation={12} sx={{ p: 4, width: '100%', maxWidth: 420, borderRadius: '12px', backdropFilter: 'blur(10px)', backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Avatar sx={{ m: 1, bgcolor: 'primary.main', width: 56, height: 56 }}>
-                        <LockOutlined fontSize="large" />
+                        {/* <LockOutlined fontSize="large" /> */}
                     </Avatar>
                     <Typography component="h1" variant="h5" fontWeight="bold">
                         DJRB Review

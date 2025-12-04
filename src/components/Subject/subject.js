@@ -9,6 +9,7 @@ import autoTable from 'jspdf-autotable';
 import Form1004 from './1004';
 import Form1007 from './1007';
 import Form1073 from './1073';
+import Form1025 from './1025';
 import { EditableField, GridInfoCard } from './FormComponents';
 import StateRequirementCheck, { STATE_REQUIREMENTS_PROMPT } from './StateRequirementCheck';
 import UnpaidOkCheck, { UNPAID_OK_PROMPT } from './UnpaidOkCheck';
@@ -31,10 +32,13 @@ import * as reconciliationValidation from './reconciliationValidation';
 import * as rentScheduleValidation from './rentScheduleValidation';
 import * as appraiserLenderValidation from './appraiserLenderValidation';
 
+import { SUBJECT_REVISION_PROMPTS, CONTRACT_REVISION_PROMPTS, NEIGHBORHOOD_REVISION_PROMPTS, SITE_REVISION_PROMPTS, IMPROVEMENTS_REVISION_PROMPTS, SALES_GRID_REVISION_PROMPTS, RECONCILIATION_REVISION_PROMPTS, COST_APPROACH_REVISION_PROMPTS, CERTIFICATION_REVISION_PROMPTS, ADDENDUM_GENERAL_REVISION_PROMPTS, FORM_1007_REVISION_PROMPTS } from './revisionPrompts';
 import uploadSoundFile from '../../Assets/upload.mp3';
 import successSoundFile from '../../Assets/success.mp3';
 import errorSoundFile from '../../Assets/error.mp3';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 
 const bounce = keyframes`
   0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
@@ -216,6 +220,28 @@ const ContractComparisonDialog = ({ open, onClose, onCompare, loading, result, e
     </Dialog>
   );
 };
+
+const RevisionLanguageDialog = ({ open, onClose, title, prompts, onCopy }) => (
+  <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <DialogTitle>{title}</DialogTitle>
+    <DialogContent dividers>
+      <List dense>
+        {prompts.map((prompt, index) => (
+          <ListItem key={index} secondaryAction={
+            <IconButton edge="end" aria-label="copy" onClick={() => onCopy(prompt)}>
+              <ContentCopyIcon />
+            </IconButton>
+          }>
+            <ListItemText primary={prompt} />
+          </ListItem>
+        ))}
+      </List>
+    </DialogContent>
+    <DialogActions>
+      <Button onClick={onClose}>Close</Button>
+    </DialogActions>
+  </Dialog>
+);
 
 const NotepadDialog = ({ open, onClose, notes, onNotesChange }) => {
   const handleSaveNotes = () => {
@@ -648,7 +674,7 @@ const SalesComparisonSection = ({ data, salesGridRows, comparableSales, extracti
 };
 
 
-const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPrompt }) => {
+const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPrompt, onAddendumRevisionButtonClick }) => {
   // const [prompt, setPrompt] = useState('');
 
 
@@ -666,7 +692,7 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
     {
       keywords: [
         "However", "Not consistently", "Not Fulfilled", "Not PRESENT",
-        "Not CONSISTENT", "ilconsistently", "absent", "ilCONSISTENT","Specifically", "mismatch", "mismatched", "missing", "inconsistent",
+        "Not CONSISTENT", "ilconsistently", "absent", "ilCONSISTENT", "Specifically", "mismatch", "mismatched", "missing", "inconsistent",
       ],
       style: { backgroundColor: '#ff0000', color: '#ffffff', padding: '1px 3px', borderRadius: '3px' }
     }
@@ -776,8 +802,8 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
                           </TableCell>
                           <TableCell>
                             <HighlightKeywords text={(typeof value === 'object' && value !== null && 'value' in value)
-                                ? String(value.value)
-                                : (typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value))}
+                              ? String(value.value)
+                              : (typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value))}
                               keywordGroups={keywordGroups}
                             />
                           </TableCell>
@@ -810,7 +836,12 @@ const PromptAnalysis = ({ onPromptSubmit, loading, response, error, submittedPro
   return (
     <div id="prompt-analysis-section" className="card shadow mb-4">
       <div className="card-header CAR1 bg-info text-white" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-        <strong>Prompt Analysis</strong>
+        <strong style={{ fontSize: '1.1rem' }}>Prompt Analysis</strong>
+        {onAddendumRevisionButtonClick && (
+          <Tooltip title="General/Addendum Revisions">
+            <IconButton onClick={onAddendumRevisionButtonClick} size="small" sx={{ color: 'white', float: 'right' }}><LibraryBooksIcon /></IconButton>
+          </Tooltip>
+        )}
       </div>
       <div className="card-body">
         <Stack spacing={2}>
@@ -1097,6 +1128,18 @@ function Subject() {
   const [notes, setNotes] = useState('');
   const [isRentFormTypeMismatchDialogOpen, setIsRentFormTypeMismatchDialogOpen] = useState(false);
 
+  const [isRevisionLangDialogOpen, setRevisionLangDialogOpen] = useState(false);
+  const [isContractRevisionLangDialogOpen, setContractRevisionLangDialogOpen] = useState(false);
+  const [isNeighborhoodRevisionLangDialogOpen, setNeighborhoodRevisionLangDialogOpen] = useState(false);
+  const [isSiteRevisionLangDialogOpen, setSiteRevisionLangDialogOpen] = useState(false);
+  const [isImprovementsRevisionLangDialogOpen, setImprovementsRevisionLangDialogOpen] = useState(false);
+  const [isSalesGridRevisionLangDialogOpen, setSalesGridRevisionLangDialogOpen] = useState(false);
+  const [isReconciliationRevisionLangDialogOpen, setReconciliationRevisionLangDialogOpen] = useState(false);
+  const [isCostApproachRevisionLangDialogOpen, setCostApproachRevisionLangDialogOpen] = useState(false);
+  const [isCertificationRevisionLangDialogOpen, setCertificationRevisionLangDialogOpen] = useState(false);
+  const [isAddendumRevisionLangDialogOpen, setAddendumRevisionLangDialogOpen] = useState(false);
+  const [is1007RevisionLangDialogOpen, set1007RevisionLangDialogOpen] = useState(false);
+
   const handleOpenNotepad = () => {
     if (!notes) { // Only set default text if notes are empty
       const now = new Date();
@@ -1105,9 +1148,6 @@ function Subject() {
     }
     setIsNotepadOpen(true);
   };
-
-
-
 
   const unpaidOkLenders = [
     'PRMG', 'Paramount Residential Mortgage Group',
@@ -1317,6 +1357,15 @@ function Subject() {
 
     // Special handling for Rent Schedule Grid
     comparableRents.forEach(rentName => {
+      if (allData[rentName]) {
+        Object.keys(allData[rentName]).forEach(fieldKey => {
+          const value = allData[rentName][fieldKey];
+          const path = [rentName, fieldKey];
+          runChecksForField('Rent Schedule', fieldKey, value, path, rentName, rentScheduleValidationRegistry);
+        });
+      }
+    });
+    ComparableRentAdjustments.forEach(rentName => {
       if (allData[rentName]) {
         Object.keys(allData[rentName]).forEach(fieldKey => {
           const value = allData[rentName][fieldKey];
@@ -1984,9 +2033,9 @@ function Subject() {
     "LENDER/CLIENT Name",
     "Lender/Client Company Name",
     "Lender/Client Company Address",
-    "Lender/Client Email Address","E&O Insurance",
+    "Lender/Client Email Address", "E&O Insurance",
     "Policy Period From",
-    "Policy Period To","License Vaild To","LICENSE/REGISTRATION/CERTIFICATION #"
+    "Policy Period To", "License Vaild To", "LICENSE/REGISTRATION/CERTIFICATION #"
   ];
 
   const supplementalAddendumFields = [
@@ -2040,6 +2089,18 @@ function Subject() {
     "Effective Date of Data Source(s) for prior sale"
   ];
 
+  const COMPARABLE_RENTAL_DATA = ["Address", "Proximity to Subject", "Current Monthly Rent", "Rent/Gross Bldg. Area", "Rent Control", "Data Source(s)", "Date of Lease(s)", "Location", "Actual Age", "Condition", "Gross Building Area", "Unit Breakdown Rm Count Tot Unit # 1", "Unit Breakdown Rm Count Br Unit # 1", "Unit Breakdown Rm Count Ba Unit # 1", "Unit Breakdown Rm Count Tot Unit # 2", "Unit Breakdown Rm Count Br Unit # 2", "Unit Breakdown Rm Count Ba Unit # 2", "Unit Breakdown Rm Count Tot Unit # 3", "Unit Breakdown Rm Count Br Unit # 3", "Unit Breakdown Rm Count Ba Unit # 3", "Unit Breakdown Rm Count Tot Unit # 4", "Unit Breakdown Rm Count Br Unit # 4", "Unit Breakdown Rm Count Ba Unit # 4", "Utilities Included"];
+  const  SUBJECT_RENT_SCHEDULE=["Unit # Lease Date Begin Date 1","Unit # Lease Date Begin Date 2","Unit # Lease Date Begin Date 3","Unit # Lease Date  Begin Date 4",
+    "Unit # Lease Date End Date 1","Unit # Lease Date End Date 2","Unit # Lease Date End Date 3","Unit # Lease Date End Date 4",
+    "Actual Rents Unit # 1  Per Unit Unfurnished","Actual Rents Unit # 2  Per Unit Unfurnished","Actual Rents Unit # 3  Per Unit Unfurnished","Actual Rents Unit # 4  Per Unit Unfurnished",
+    "Actual Rents Unit # 1  Per Unit Furnished","Actual Rents Unit # 2  Per Unit Furnished","Actual Rents Unit # 3  Per Unit Furnished","Actual Rents Unit # 4  Per Unit Furnished",
+    "Actual Rents Unit # 1 Total Rents","Actual Rents Unit # 2 Total Rents","Actual Rents Unit # 3 Total Rents","Actual Rents Unit # 4 Total Rents",  
+    "Opinion Of Market Rent Unit # 1 Per Unit Unfurnished","Opinion Of Market Rent Unit # 2 Per Unit Unfurnished","Opinion Of Market Rent Unit # 3 Per Unit Unfurnished","Opinion Of Market Rent Unit # 4 Per Unit Unfurnished",
+    "Opinion Of Market Rent Unit # 1 Per Unit Furnished","Opinion Of Market Rent Unit # 2 Per Unit Furnished","Opinion Of Market Rent Unit # 3 Per Unit Furnished","Opinion Of Market Rent Unit # 4 Per Unit Furnished",
+    "Opinion Of Market Rent Unit # 1 Total Rents","Opinion Of Market Rent Unit # 2 Total Rents","Opinion Of Market Rent Unit # 3 Total Rents","Opinion Of Market Rent Unit # 4 Total Rents",  
+    "Comment on lease data","Total Actual Monthly Rent","Other Monthly Income (itemize)","Total Actual Monthly Income"," Total Gross Monthly Rent","Other Monthly Income (itemize)",
+    "Total Estimated Monthly Income"," Utilities included in estimated rents","Comments on actual or estimated rents and other monthly income (including personal property)", 
+  ];
   const salesComparisonAdditionalInfoFields = [
 
     "I did did not research the sale or transfer history of the subject property and comparable sales. If not, explain",
@@ -2061,10 +2122,6 @@ function Subject() {
     "Are foreclosure sales (REO sales) a factor in the project?", "If yes, indicate the number of REO listings and explain the trends in listings and sales of foreclosed properties.", "Summarize the above trends and address the impact on the subject unit and project.",
   ];
 
-  // const highlightedSalesComparisonAdditionalInfoFields = [
-  //   "There are ____ comparable properties currently offered for sale in the subject neighborhood ranging in price from$ ___to $___",
-  //   "There are ___comparable sales in the subject neighborhoodwithin the past twelvemonths ranging in sale price from$___ to $____",
-  // ];
 
 
   const condoCoopProjectsRows = [
@@ -2073,9 +2130,7 @@ function Subject() {
     { label: "Total # of Comparable Active Listings", fullLabel: "Subject Project Data Total # of Comparable Active Listings" },
     { label: "Months of Unit Supply (Total Listings/Ab.Rate)", fullLabel: "Subject Project Data Months of Unit Supply (Total Listings/Ab.Rate)" },
   ];
-  // const condoCoopProjectsFields = [
-  //   "Are foreclosure sales (REO sales) a factor in the project?", "If yes, indicate the number of REO listings and explain the trends in listings and sales of foreclosed properties.", "Summarize the above trends and address the impact on the subject unit and project.",
-  // ];
+
 
   const imageAnalysisFields = [
     "include bedroom, bed, bathroom, bath, half bath, kitchen, lobby, foyer, living room count with label and photo,please explan and match the floor plan with photo and improvement section, GLA",
@@ -2173,7 +2228,7 @@ function Subject() {
   }; const formTypes = ['1004', '1004C', '1004D', '1025', '1073', '2090', '203k-FHA', '2055', '1075', '2095', '1007', '216', '1025 + 1007', '1073 + 1007'];
 
   const sections = useMemo(() => [
-    { id: 'subject-info', title: 'Subject', category: 'SUBJECT' }, // Root level data
+    { id: 'subject-info', title: 'Subject', category: 'SUBJECT' },
     // { id: 'html-data-section', title: 'HTML Data' },
     { id: 'contract-section', title: 'Contract', category: 'CONTRACT' },
     { id: 'neighborhood-section', title: 'Neighborhood', category: 'NEIGHBORHOOD' },
@@ -2189,6 +2244,8 @@ function Subject() {
     { id: 'info-of-sales-section', title: 'Info of Sales', category: 'INFO_OF_SALES' },
     // { id: 'sales-comparison-additional-info', title: 'Sales Comparison Additional Info', category: 'SALES_COMPARISON_ADDITIONAL_INFO' },
     { id: 'sales-history-section', title: 'Sales History', category: 'SALES_TRANSFER' },
+    { id: 'comparable-rental-data', title: 'COMPARABLE RENTAL DATA', category: 'COMPARABLE_RENTAL_DATA' },
+    { id: 'subject-rent-schedule', title: 'SUBJECT RENT SCHEDULE', category: 'SUBJECT_RENT_SCHEDULE' },
     { id: 'rent-schedule-section', title: 'Comparable Rent Schedule', category: 'RENT_SCHEDULE_GRID' },
     { id: 'rent-schedule-reconciliation-section', title: 'Rent Schedule Reconciliation', category: 'RENT_SCHEDULE_RECONCILIATION' },
     { id: 'reconciliation-section', title: 'Reconciliation', category: 'RECONCILIATION' },
@@ -2293,6 +2350,18 @@ function Subject() {
     "COMPARABLE NO. 8",
     "COMPARABLE NO. 9",
   ];
+
+  const ComparableRentAdjustments = [
+    "COMPARABLE RENTAL NO. 1",
+    "COMPARABLE RENTAL NO. 2",
+    "COMPARABLE RENTAL NO. 3",
+    "COMPARABLE RENTAL NO. 4",
+    "COMPARABLE RENTAL NO. 5",
+    "COMPARABLE RENTAL NO. 6",
+    "COMPARABLE RENTAL NO. 7",
+    "COMPARABLE RENTAL NO. 8",
+    "COMPARABLE RENTAL NO. 9",
+  ]
 
   const onFileChange = (e) => {
     const file = e.target.files && e.target.files[0];
@@ -3287,6 +3356,9 @@ function Subject() {
       case '1004':
         visibleSectionIds = baseSections.filter(id => !['rent-schedule-section', 'prior-sale-history-section', 'rent-schedule-reconciliation-section', 'project-site-section', 'project-info-section', 'project-analysis-section', 'unit-descriptions-section'].includes(id));
         break;
+      case '1025':
+        visibleSectionIds = baseSections.filter(id => !['rent-schedule-section', 'project-site-section', 'project-info-section', 'rent-schedule-reconciliation-section', 'project-analysis-section', 'unit-descriptions-section', 'market-conditions-section'].includes(id));
+        break;
       case '1073':
         visibleSectionIds = baseSections.filter(id => !['rent-schedule-section', 'improvements-section', 'site-section', 'rent-schedule-reconciliation-section', 'pud-info-section'].includes(id));
         break;
@@ -3303,7 +3375,20 @@ function Subject() {
   };
 
   const renderForm = () => {
-    const props = { data, allData: data, extractionAttempted, handleDataChange, editingField, setEditingField, isEditable, highlightedSubjectFields, highlightedContractFields, highlightedSiteFields, subjectFields, contractFields, neighborhoodFields, siteFields, improvementsFields, salesGridRows, comparableSales, salesComparisonAdditionalInfoFields, salesHistoryFields, priorSaleHistoryFields, reconciliationFields, costApproachFields, incomeApproachFields, pudInformationFields, marketConditionsFields, marketConditionsRows, condoCoopProjectsRows, condoForeclosureFields, appraiserFields, supplementalAddendumFields, uniformResidentialAppraisalReportFields, appraisalAndReportIdentificationFields, projectSiteFields, projectInfoFields, projectAnalysisFields, unitDescriptionsFields, imageAnalysisFields, dataConsistencyFields, comparableRents, RentSchedulesFIELDS2, rentScheduleReconciliationFields, formType: selectedFormType, comparisonData, getComparisonStyle, SalesComparisonSection, EditableField, infoOfSalesFields, loading, stateRequirementFields, handleStateRequirementCheck, stateReqLoading, stateReqResponse, stateReqError, handleUnpaidOkCheck, unpaidOkLoading, unpaidOkResponse, unpaidOkError, handleClientRequirementCheck, clientReqLoading, clientReqResponse, clientReqError, handleFhaCheck, handleADUCheck, fhaLoading, fhaResponse, fhaError, ADULoading, handleEscalationCheck, escalationLoading, escalationResponse, escalationError, onDataChange: handleDataChange, handleExtract, manualValidations, handleManualValidation };
+    const props = {
+      data, allData: data, extractionAttempted, handleDataChange, editingField, setEditingField, isEditable, highlightedSubjectFields, highlightedContractFields, highlightedSiteFields, subjectFields, contractFields, neighborhoodFields, siteFields, improvementsFields, salesGridRows, comparableSales, salesComparisonAdditionalInfoFields, salesHistoryFields, priorSaleHistoryFields, reconciliationFields, costApproachFields, incomeApproachFields, pudInformationFields, marketConditionsFields, marketConditionsRows, condoCoopProjectsRows, condoForeclosureFields, appraiserFields, supplementalAddendumFields, uniformResidentialAppraisalReportFields, appraisalAndReportIdentificationFields, projectSiteFields, projectInfoFields, projectAnalysisFields, unitDescriptionsFields, imageAnalysisFields, dataConsistencyFields, ComparableRentAdjustments, comparableRents, RentSchedulesFIELDS2, rentScheduleReconciliationFields, formType: selectedFormType, comparisonData, getComparisonStyle, SalesComparisonSection, EditableField, infoOfSalesFields, loading, stateRequirementFields, handleStateRequirementCheck, stateReqLoading, stateReqResponse, stateReqError, handleUnpaidOkCheck, unpaidOkLoading, unpaidOkResponse, unpaidOkError, handleClientRequirementCheck, clientReqLoading, clientReqResponse, clientReqError, handleFhaCheck, handleADUCheck, fhaLoading, fhaResponse, fhaError, ADULoading, handleEscalationCheck, escalationLoading, escalationResponse, escalationError, onDataChange: handleDataChange, handleExtract, manualValidations, handleManualValidation,SUBJECT_RENT_SCHEDULE, COMPARABLE_RENTAL_DATA,
+      onSubjectRevisionButtonClick: () => setRevisionLangDialogOpen(true),
+      onContractRevisionButtonClick: () => setContractRevisionLangDialogOpen(true),
+      onNeighborhoodRevisionButtonClick: () => setNeighborhoodRevisionLangDialogOpen(true),
+      onSiteRevisionButtonClick: () => setSiteRevisionLangDialogOpen(true),
+      onImprovementsRevisionButtonClick: () => setImprovementsRevisionLangDialogOpen(true),
+      onSalesGridRevisionButtonClick: () => setSalesGridRevisionLangDialogOpen(true),
+      onReconciliationRevisionButtonClick: () => setReconciliationRevisionLangDialogOpen(true),
+      onCostApproachRevisionButtonClick: () => setCostApproachRevisionLangDialogOpen(true),
+      onCertificationRevisionButtonClick: () => setCertificationRevisionLangDialogOpen(true),
+      onAddendumRevisionButtonClick: () => setAddendumRevisionLangDialogOpen(true),
+      on1007RevisionButtonClick: () => set1007RevisionLangDialogOpen(true)
+    };
 
     let formComponent;
     switch (selectedFormType) {
@@ -3315,6 +3400,9 @@ function Subject() {
         break;
       case '1007':
         formComponent = <Form1007 {...props} allData={data} />;
+        break;
+      case '1025':
+        formComponent = <Form1025 {...props} allData={data} />;
         break;
       default:
         return (
@@ -3572,7 +3660,9 @@ function Subject() {
                   )}
 
                   {/* TOTAL TIME TIMER */}
-                  <Tooltip title={isTimerRunning ? "Click to pause timer" : "Click to start timer"}>
+                  <Tooltip title={isTimerRunning
+                    // ? "Click to pause timer" : "Click to start timer"
+                  }>
                     <Typography
                       variant="body2"
                       sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', cursor: 'pointer' }}
@@ -3881,6 +3971,7 @@ function Subject() {
             response={promptAnalysisResponse}
             error={promptAnalysisError}
             submittedPrompt={submittedPrompt}
+            onAddendumRevisionButtonClick={() => setAddendumRevisionLangDialogOpen(true)}
           />
 
           {rawGemini && (
@@ -3966,6 +4057,117 @@ function Subject() {
           <Button onClick={() => setIsRentFormTypeMismatchDialogOpen(false)} variant="contained">Close</Button>
         </DialogActions>
       </Dialog>
+      <RevisionLanguageDialog
+        open={isContractRevisionLangDialogOpen}
+        onClose={() => setContractRevisionLangDialogOpen(false)}
+        title="Contract Section Revision Language"
+        prompts={CONTRACT_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+      <RevisionLanguageDialog
+        open={isNeighborhoodRevisionLangDialogOpen}
+        onClose={() => setNeighborhoodRevisionLangDialogOpen(false)}
+        title="Neighborhood Section Revision Language"
+        prompts={NEIGHBORHOOD_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+      <RevisionLanguageDialog
+        open={isSiteRevisionLangDialogOpen}
+        onClose={() => setSiteRevisionLangDialogOpen(false)}
+        title="Site Section Revision Language"
+        prompts={SITE_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+      <RevisionLanguageDialog
+        open={isImprovementsRevisionLangDialogOpen}
+        onClose={() => setImprovementsRevisionLangDialogOpen(false)}
+        title="Improvements Section Revision Language"
+        prompts={IMPROVEMENTS_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+      <RevisionLanguageDialog
+        open={isSalesGridRevisionLangDialogOpen}
+        onClose={() => setSalesGridRevisionLangDialogOpen(false)}
+        title="Sales Comparison Grid Revision Language"
+        prompts={SALES_GRID_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+      <RevisionLanguageDialog
+        open={isReconciliationRevisionLangDialogOpen}
+        onClose={() => setReconciliationRevisionLangDialogOpen(false)}
+        title="Reconciliation Section Revision Language"
+        prompts={RECONCILIATION_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+      <RevisionLanguageDialog
+        open={isCostApproachRevisionLangDialogOpen}
+        onClose={() => setCostApproachRevisionLangDialogOpen(false)}
+        title="Cost Approach Section Revision Language"
+        prompts={COST_APPROACH_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+      <RevisionLanguageDialog
+        open={isCertificationRevisionLangDialogOpen}
+        onClose={() => setCertificationRevisionLangDialogOpen(false)}
+        title="Certification Section Revision Language"
+        prompts={CERTIFICATION_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+      <RevisionLanguageDialog
+        open={isAddendumRevisionLangDialogOpen}
+        onClose={() => setAddendumRevisionLangDialogOpen(false)}
+        title="General / Addendum Revision Language"
+        prompts={ADDENDUM_GENERAL_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+      <RevisionLanguageDialog
+        open={is1007RevisionLangDialogOpen}
+        onClose={() => set1007RevisionLangDialogOpen(false)}
+        title="1007 / Rent Schedule Revision Language"
+        prompts={FORM_1007_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+      <RevisionLanguageDialog
+        open={isRevisionLangDialogOpen}
+        onClose={() => setRevisionLangDialogOpen(false)}
+        title="Subject Section Revision Language"
+        prompts={SUBJECT_REVISION_PROMPTS}
+        onCopy={(text) => {
+          navigator.clipboard.writeText(text);
+          setNotification({ open: true, message: 'Copied to clipboard!', severity: 'success' });
+        }}
+      />
+
 
 
     </ThemeProvider >

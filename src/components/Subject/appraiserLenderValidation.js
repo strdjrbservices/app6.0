@@ -13,6 +13,20 @@ export const checkLenderAddressInconsistency = (field, data) => {
     return { isMatch: true };
 };
 
+export const checkClientNameHtmlConsistency = (field, text, allData) => {
+    if (field !== 'LENDER/CLIENT Name') return null;
+
+    const certificationClientName = String(text || '').trim();
+    const htmlClientName = String(allData?.comparisonData?.['Client Name'] || '').trim();
+
+    if (htmlClientName && certificationClientName && htmlClientName.toLowerCase() !== certificationClientName.toLowerCase()) {
+        return {
+            isError: true,
+            message: `Client Name mismatch. HTML: '${htmlClientName}', Report: '${certificationClientName}'.`
+        };
+    }
+    return { isMatch: true };
+};
 export const checkAppraiserFieldsNotBlank = (field, text) => {
     const fieldsToCheck = [
         "Signature",

@@ -1,5 +1,7 @@
 
 import { EditableField } from './FormComponents';
+import { Tooltip, IconButton } from '@mui/material';
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 
 
 const SalesComparisonSection = ({
@@ -16,14 +18,22 @@ const SalesComparisonSection = ({
   isEditable,
   allData,
   manualValidations,
-  handleManualValidation
+  handleManualValidation,
+  onRevisionButtonClick
 }) => {
 
   return (
     <>
       <div id="sales-comparison" style={{ marginBottom: '1rem', marginTop: '1rem' }} className="card shadow mb-4">
         <div className="card-header CAR1 bg-primary text-white" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-          <strong>Sales Comparison Approach</strong>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <strong>Sales Comparison Approach</strong>
+            {onRevisionButtonClick && (
+              <Tooltip title="Revision Language">
+                <IconButton onClick={onRevisionButtonClick} size="small" sx={{ color: 'white' }}><LibraryBooksIcon /></IconButton>
+              </Tooltip>
+            )}
+          </div>
         </div>
         <div className="card-body p-0 table-container">
           <table className="table table-hover table-striped mb-0" style={{ fontSize: '0.8rem' }}>

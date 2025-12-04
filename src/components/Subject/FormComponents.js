@@ -7,7 +7,7 @@ import { checkHousingPriceAndAge, checkNeighborhoodUsageConsistency, checkSingle
 import { checkUnits, checkAccessoryUnit, checkNumberOfStories, checkPropertyType, checkConstructionStatusAndReconciliation, checkDesignStyle, checkYearBuilt, checkEffectiveAge, checkAdditionalFeatures, checkPropertyConditionDescription, checkPhysicalDeficienciesImprovements, checkNeighborhoodConformity, checkFoundationType, checkBasementDetails, checkEvidenceOf, checkMaterialCondition, checkHeatingFuel, checkCarStorage, checkImprovementsFieldsNotBlank } from './improvementsValidation';
 import { checkConditionAdjustment, checkBedroomsAdjustment, checkBathsAdjustment, checkQualityOfConstructionAdjustment, checkProximityToSubject, checkSiteAdjustment, checkGrossLivingAreaAdjustment, checkSubjectAddressInconsistency, checkDesignStyleAdjustment, checkFunctionalUtilityAdjustment, checkEnergyEfficientItemsAdjustment, checkPorchPatioDeckAdjustment, checkHeatingCoolingAdjustment, checkDataSourceDOM, checkActualAgeAdjustment, checkLeaseholdFeeSimpleConsistency, checkDateOfSale, checkLocationConsistency, checkSalePrice } from './salesComparisonValidation';
 import { checkFinalValueConsistency, checkCostApproachDeveloped, checkAppraisalCondition, checkAsOfDate, checkFinalValueBracketing, checkReconciliationFieldsNotBlank } from './reconciliationValidation';
-import { checkLenderAddressInconsistency, checkLenderNameInconsistency, checkAppraiserFieldsNotBlank, checkLicenseNumberConsistency as checkAppraiserLicenseConsistency, checkDateGreaterThanToday } from './appraiserLenderValidation';
+import { checkLenderAddressInconsistency, checkLenderNameInconsistency, checkAppraiserFieldsNotBlank, checkLicenseNumberConsistency as checkAppraiserLicenseConsistency, checkDateGreaterThanToday, checkClientNameHtmlConsistency } from './appraiserLenderValidation';
 import { checkCostNew, checkSourceOfCostData, checkIndicatedValueByCostApproach, checkCostApproachFieldsNotBlank } from './costApproachValidation';
 import { checkResearchHistory, checkSubjectPriorSales, checkComparablePriorSales, checkDataSourceNotBlank, checkEffectiveDateIsCurrentYear, checkSubjectPriorSaleDate, checkCompPriorSaleDate } from './salesHistoryValidation';
 import { checkStateRequirements } from './stateValidation';
@@ -22,6 +22,7 @@ import { checkPriorSaleHistoryFieldsNotBlank } from './priorSaleHistoryValidatio
 import { checkInfoOfSalesFieldsNotBlank } from './infoOfSalesValidation';
 import { Tooltip, Box, LinearProgress, Paper, Typography, IconButton } from '@mui/material';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 
 
 const HighlightKeywords = ({ text, keywords }) => {
@@ -227,7 +228,7 @@ export const EditableField = ({ fieldPath, value, onDataChange, editingField, se
   });
 
   validationRegistry['Lender/Client Company Address'].push(checkLenderAddressInconsistency);
-  validationRegistry['LENDER/CLIENT Name'].push(checkLenderNameInconsistency);
+  validationRegistry['LENDER/CLIENT Name'].push(checkLenderNameInconsistency, checkClientNameHtmlConsistency);
   validationRegistry['LICENSE/REGISTRATION/CERTIFICATION #'] = [checkAppraiserLicenseConsistency]; // Corrected this line
   validationRegistry['Policy Period To'] = [checkDateGreaterThanToday];
   validationRegistry['License Vaild To'] = [checkDateGreaterThanToday];
@@ -420,7 +421,7 @@ export const EditableField = ({ fieldPath, value, onDataChange, editingField, se
       }
     }
     if (!validationResult && saleName) {
-      const salesFns = validationRegistry[field] || [];
+      const salesFns = validationRegistry[field] || []; // Re-fetch for clarity
       const result = salesFns.map(fn => fn(field, data, saleName)).find(r => r);
       if (result) validationResult = result;
     }
@@ -445,7 +446,7 @@ export const EditableField = ({ fieldPath, value, onDataChange, editingField, se
     return { style, message };
   };
 
-  const validation = getValidationInfo(fieldPath.slice(-1)[0], value, allData, fieldPath, saleName, manualValidations);
+  const validation = getValidationInfo(fieldPath.slice(-1)[0], value, allData, fieldPath, saleName, manualValidations); // Pass allData here
   const isManuallyValidated = manualValidations && manualValidations[JSON.stringify(fieldPath)];
   const fieldContent = (
     <div className={`editable-field-container ${isAdjustment ? 'adjustment-value' : ''}`} onClick={handleContainerClick} style={{ ...(isMissing ? { border: '2px solid #ff50315b' } : {}), ...validation.style, position: 'relative' }}>
@@ -599,7 +600,7 @@ export const MarketConditionsTable = ({ id, title, data, onDataChange, editingFi
   );
 };
 
-export const SubjectInfoCard = ({ id, title, fields, data, extractionAttempted, onDataChange, isEditable, editingField, setEditingField, highlightedFields, allData, comparisonData, getComparisonStyle, loading, loadingSection, contractExtracted, setContractExtracted, handleExtract, manualValidations, handleManualValidation }) => {
+export const SubjectInfoCard = ({ id, title, fields, data, extractionAttempted, onDataChange, isEditable, editingField, setEditingField, highlightedFields, allData, comparisonData, getComparisonStyle, loading, loadingSection, contractExtracted, setContractExtracted, handleExtract, manualValidations, handleManualValidation, onRevisionButtonClick }) => {
   const renderGridItem = (field) => {
     const isHighlighted = highlightedFields.includes(field);
     const itemStyle = {};
@@ -659,7 +660,12 @@ export const SubjectInfoCard = ({ id, title, fields, data, extractionAttempted, 
   return (
     <div id={id} className="card shadow mb-4 subject-info-card">
       <div className="card-header CAR1 bg-secondary text-white" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-        <strong>{title}</strong>
+        <strong style={{ fontSize: '1.1rem' }}>{title}</strong>
+        {onRevisionButtonClick && (
+          <Tooltip title="Revision Language">
+            <IconButton onClick={onRevisionButtonClick} size="small" sx={{ color: 'white', float: 'right' }}><LibraryBooksIcon /></IconButton>
+          </Tooltip>
+        )}
       </div>
       {loading && loadingSection === id && (
         <Box sx={{ width: '100%' }}><LinearProgress /></Box>
@@ -679,7 +685,7 @@ export const SubjectInfoCard = ({ id, title, fields, data, extractionAttempted, 
   );
 };
 
-export const GridInfoCard = ({ id, title, fields, data, cardClass = 'bg-secondary', usePre = false, extractionAttempted, onDataChange, editingField, setEditingField, highlightedFields = [], allData, loading, loadingSection, manualValidations, handleManualValidation }) => {
+export const GridInfoCard = ({ id, title, fields, data, cardClass = 'bg-secondary', usePre = false, extractionAttempted, onDataChange, editingField, setEditingField, highlightedFields = [], allData, loading, loadingSection, manualValidations, handleManualValidation, onRevisionButtonClick }) => {
 
   const renderNeighborhoodTotal = () => {
     if (id !== 'neighborhood-section' || !data) return null;
@@ -793,6 +799,11 @@ export const GridInfoCard = ({ id, title, fields, data, cardClass = 'bg-secondar
           alignItems: 'center',
         }}>
         <Typography variant="h6" component="h5">{title}</Typography>
+        {onRevisionButtonClick && (
+          <Tooltip title="Revision Language">
+            <IconButton onClick={onRevisionButtonClick} size="small" sx={{ color: 'white' }}><LibraryBooksIcon /></IconButton>
+          </Tooltip>
+        )}
           {renderNeighborhoodTotal()}
       </Box>
       {loading && loadingSection === id && (

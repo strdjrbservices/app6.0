@@ -68,14 +68,7 @@ function App() {
               >
                 1004D
               </Link>
-              {/* <Link
-                to="/html-extractor"
-                target="_blank" rel="noopener noreferrer"
-                className={`btn ${location.pathname === '/html-extractor' ? 'btn-primary' : 'btn-outline-primary'
-                  }`}
-              >
-                HTML Extractor
-              </Link> */}
+
             </div>
           )}
           {isAuthenticated && (
